@@ -20,6 +20,8 @@
     if(!s||typeof s.id!=='string'||!['screen','practice'].includes(s.mode)||!Array.isArray(s.items)||!s.items.length||s.items.length>bank.items.length||new Set(s.items).size!==s.items.length||s.items.some(id=>!bank.items.some(i=>i.id===id&&i.phase===s.mode))||!Array.isArray(s.results)||s.results.length>s.items.length||!s.results.every((r,i)=>r.item===s.items[i]&&['independent','help','incorrect','skip'].includes(r.outcome))||typeof s.helped!=='boolean'||typeof s.ended!=='boolean'||typeof s.complete!=='boolean'||!Array.isArray(s.selection))throw Error('بيانات جلسة غير صالحة.');
     if(s.complete&&(!s.ended||s.results.length!==s.items.length))throw Error('جلسة غير مكتملة.');
    }
+   if(c.games!==undefined&&(!Array.isArray(c.games)||c.games.length>2000||!c.games.every(g=>g&&bank.groups.some(x=>x.id===g.group)&&Number.isInteger(g.rounds)&&Number.isInteger(g.firstTry)&&g.firstTry>=0&&g.firstTry<=g.rounds)))throw Error('بيانات الألعاب غير صالحة.');
+   if(c.program!==undefined&&(!c.program||typeof c.program.done!=='object'||typeof c.program.unlocked!=='object'))throw Error('بيانات الخطة اليومية غير صالحة.');
   }
   if(d.active!==null&&!ids.has(d.active))throw Error('الحساب النشط غير موجود.');
   return d;
@@ -38,11 +40,22 @@
    const next=clone(this.data);researchIds(next);if(JSON.stringify(next)!==JSON.stringify(this.data))this.commit(d=>Object.assign(d,next));return clone(this.data);
   }
   draft(){return this.active()?.sessions.find(s=>!s.ended)||null;}
-  start(mode,group){if(!this.active())throw Error('اختر حسابًا.');if(this.draft())throw Error('أكمل الجلسة الحالية أو أنهها أولًا.');
-   const items=this.bank.items.filter(i=>i.phase===mode&&(!group||i.group===group)).map(i=>i.id);
+  // A daily-plan step passes a short item list and its day; otherwise the whole skill or screen is used.
+  start(mode,group,options={}){if(!this.active())throw Error('اختر حسابًا.');if(this.draft())throw Error('أكمل الجلسة الحالية أو أنهها أولًا.');
+   const pool=this.bank.items.filter(i=>i.phase===mode&&(!group||i.group===group)).map(i=>i.id);
+   const items=options.items?options.items.filter(id=>pool.includes(id)):pool;
    if(!['screen','practice'].includes(mode)||!items.length)throw Error('لا توجد مهام.');
-   this.commit(d=>{d.children.find(c=>c.id===d.active).sessions.push({id:crypto.randomUUID(),mode,group:group||null,started:new Date().toISOString(),items,results:[],helped:false,selection:[],ended:false,complete:false});});return this.draft();
+   this.commit(d=>{const session={id:crypto.randomUUID(),mode,group:group||null,started:new Date().toISOString(),items,results:[],helped:false,selection:[],ended:false,complete:false};if(Number.isInteger(options.day))Object.assign(session,{day:options.day,step:options.step});d.children.find(c=>c.id===d.active).sessions.push(session);});return this.draft();
   }
+  // Least-practised items first, so short daily sets move through the whole skill.
+  nextPractice(group,count){const tally=new Map();for(const s of this.active()?.sessions||[])for(const r of s.results)tally.set(r.item,(tally.get(r.item)||0)+1);
+   return this.bank.items.filter(i=>i.phase==='practice'&&i.group===group).map((i,order)=>({id:i.id,order,n:tally.get(i.id)||0})).sort((a,b)=>a.n-b.n||a.order-b.order).slice(0,count).map(x=>x.id);}
+  program(){const p=this.active()?.program;return {done:{...p?.done},unlocked:{...p?.unlocked}};}
+  markStep(day,step){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};c.program.done[day+':'+step]||=new Date().toISOString();});}
+  unlockDay(day,open=true){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};if(open)c.program.unlocked[day]=true;else delete c.program.unlocked[day];});}
+  recordGame(group,rounds,firstTry){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.games||=[];c.games.push({group,at:new Date().toISOString(),rounds,firstTry});if(c.games.length>2000)c.games.splice(0,c.games.length-2000);});}
+  // Picture cards are a cue: showing them records help for the current item.
+  showPictures(){this.change(s=>{s.helped=true;s.pictures=true;});}
   change(fn){this.commit(d=>{const s=d.children.find(c=>c.id===d.active).sessions.find(s=>!s.ended);if(!s)throw Error('لا توجد جلسة نشطة.');fn(s);});}
   help(){this.change(s=>{s.helped=true;});}
   selectAnswer(key){const s=this.draft(),item=this.bank.items.find(i=>i.id===s?.items[s.results.length]);if(!item||!item.options.includes(key)||s.selection.length>=item.answer.length)return null;
@@ -53,7 +66,7 @@
    const item=this.bank.items.find(i=>i.id===s.items[s.results.length]);
    if(item.kind!=='observe'&&outcome==='independent'&&(s.selection.length!==item.answer.length||!s.selection.every((v,i)=>v===item.answer[i])))throw Error('أكمل الاستجابة أولًا.');
    if(outcome==='independent'&&s.helped)outcome='help';
-   s.results.push({item:item.id,outcome,at:new Date().toISOString()});s.helped=false;s.delivered=false;s.selection=[];
+   s.results.push({item:item.id,outcome,at:new Date().toISOString()});s.helped=false;s.delivered=false;s.pictures=false;s.selection=[];
    if(s.results.length===s.items.length){s.ended=true;s.complete=true;s.finished=new Date().toISOString();}
   });}
   finish(){this.change(s=>{s.ended=true;s.complete=false;s.finished=new Date().toISOString();});}

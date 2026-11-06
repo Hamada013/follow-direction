@@ -187,6 +187,9 @@
 
   if(tools.children.length)item.append(tools);return item;
  }
+ // The avatar for one child, outside the account list (for example on the road map).
+ function badge(child){if(!child||isAdmin(child))return null;let saved=[],storage;try{storage=localStorage;saved=JSON.parse(localStorage.getItem(KEY))?.children||[];}catch{}
+  avatars=assignAvatars(storage,saved.some(entry=>entry.id===child.id)?saved:[...saved,child]);return avatars.has(child.id)?avatar(child):null;}
  function render(host,children,makeRow){
   openSort?.close();
   host.classList.remove('suite-account-list');host.classList.add('suite-account-browser');host.replaceChildren();
@@ -210,5 +213,5 @@
   search.oninput=update;search.onkeydown=event=>{if(event.key==='Enter')event.preventDefault();};update();
  }
  root.addEventListener('storage',event=>{if(event.key!==KEY)return;try{const before=JSON.parse(event.oldValue||'null'),after=JSON.parse(event.newValue||'null');if(JSON.stringify(before?.deletedChildren)!==JSON.stringify(after?.deletedChildren))location.reload();}catch{}});
- root.SuiteAccounts={button,request,row,render};
+ root.SuiteAccounts={button,request,row,render,badge};
 })(globalThis);
