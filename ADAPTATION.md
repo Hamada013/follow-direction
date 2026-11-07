@@ -23,13 +23,13 @@ The source targets adults. This app is not a standardized preschool assessment, 
 - Only the latest **completed** screening controls the plan. Three independent responses out of three in a skill mark it checked/faded. Any help, error or skipped item leaves it available. A partial new screen leaves the previous completed plan intact. Checked cards can be deliberately opened for practice after confirmation. Practice never changes the screening plan.
 - Existing task IDs and audio numbers 001–066 are retained; new recordings use 067–253. Saved sessions retain their original item lists; newly started practice sessions have 20 tasks per skill.
 - Save after each action, cue, answer and score. Closing/reloading preserves the current child's unfinished session. Home > Follow/متابعة resumes it. Only one unfinished session per child; ending early saves a partial report. Practice and screening are separate dated sessions, never combined into a mastery score.
-- Reports show counts with explicit assessed and unassessed denominators, grouped horizontal bars and the practice plan. Browser printing offers PDF. The Accounts spreadsheet icon exports all saved child cases to a local research .xlsx workbook with stable numeric case IDs, six sheets and three native charts. Screening and practice remain separate; skipped and pending items are not incorrect responses.
+- Reports show counts with explicit assessed and unassessed denominators, grouped horizontal bars and the practice plan. Browser printing offers PDF. The Accounts comparison table sets children side by side by age group and gender, using independent / assessed rates for the latest completed screen and for practice. Screening and practice remain separate; skipped and pending items are not incorrect responses.
 
 ## Accounts and privacy
 
 VOC-style local accounts: stable outlined fruit/animal avatars, Arabic search and sorting, protected hidden Hamada account, parent calculation gate, admin-only deletion and confirmation. Type `Hamada` to sign in to the admin account. This app has independent stores, `follow-direction-children-v1` and `follow-direction-account-avatars-v1`; it reads no VOC progress and uses no Google, Drive, Sheets, Firebase or analytics service.
 
-These are device/browser profiles, not authenticated online accounts. They do not synchronize between devices. From the profile dialog, download a JSON backup, transfer it yourself, then restore on the second device. Restore is an explicit whole-app replacement with confirmation. Browser data clearing removes local progress; keep backups. A stale tab cannot overwrite another tab's saved changes. Corrupt/unavailable storage is reported without resetting it.
+These are device/browser profiles, not authenticated online accounts. They do not synchronize between devices. There is no import, export or backup. Browser data clearing removes local progress. Gender and birth date are optional profile fields, validated and editable in the comparison table. A stale tab cannot overwrite another tab's saved changes. Corrupt/unavailable storage is reported without resetting it.
 
 ## Assets and logo
 

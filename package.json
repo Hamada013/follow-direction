@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node scripts/build-pwa.cjs",
     "stage": "node scripts/stage-site.cjs",
-    "test": "node tests/model.cjs && node tests/research.cjs && node tests/pictures.cjs && node tests/program.cjs",
+    "test": "node tests/model.cjs && node tests/pictures.cjs && node tests/program.cjs",
     "test:browser": "node tests/browser.cjs",
     "test:updates": "node tests/updates.cjs",
     "test:links": "node tests/one-way-links.cjs",

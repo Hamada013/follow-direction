@@ -1,0 +1,142 @@
+/* Fixed screens. The page itself never scrolls: header, screen and bottom bar share the window
+   height and each child screen sizes its content to the space left. Game stages, choice rows and
+   picture cards are size containers, so drawings scale with container units (cqw/cqh).
+   Only the reading pages (report and comparison table) scroll, inside their own area. */
+html,body{height:100%;overflow:hidden}
+body{height:100dvh;min-height:0;display:flex;flex-direction:column;padding-bottom:0}
+.app-header{flex:none;padding-block:6px}
+main{flex:1 1 auto;min-height:0;width:100%;max-width:1100px;margin:0 auto;padding:clamp(8px,2vh,22px) clamp(12px,3vw,24px);display:flex;flex-direction:column;overflow:hidden}
+main>*{flex:none}
+body[data-view=report] main,body[data-view=compare] main{display:block;overflow-y:auto;overscroll-behavior:contain}
+.section-heading{margin-bottom:clamp(6px,1.6vh,18px)}
+.section-heading h1{font-size:clamp(22px,min(3.6vw,4.4vh),34px)}
+.card{margin-bottom:clamp(8px,1.6vh,18px)}
+
+/* Messages appear under the header so they never cover the bottom bar */
+#status{bottom:auto;top:calc(64px + env(safe-area-inset-top))}
+
+/* Credits: one line, on the home screen only */
+footer{flex:none;display:none;padding:2px 12px 4px;font-size:11px;line-height:1.6}
+body[data-view=home] footer{display:block}
+footer span,footer a{display:inline}
+footer>*+*::before{content:" · ";display:inline-block;white-space:pre}
+
+/* Bottom navigation bar; hidden while a game or a direction is on screen (they have their own exit) */
+#tabbar{flex:none;display:flex;justify-content:center;gap:2px;padding:4px 6px calc(4px + env(safe-area-inset-bottom));background:#ffffffef;border-top:1px solid #dceaf4;box-shadow:0 -6px 20px #22445a08}
+body[data-view=game] #tabbar,body[data-view=task] #tabbar{display:none}
+body[data-view=game],body[data-view=task]{padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1 1 0;max-width:118px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:14px;font-size:12px;font-weight:600;color:#5c7285}
+.tab svg{width:24px;height:24px;flex:none}
+.tab span{line-height:1.25;text-align:center;overflow-wrap:anywhere}
+.tab[aria-current=page]{color:#22445a;background:#e6f4ec}
+.tab.therapist{color:#8a7a5a}
+.tab.therapist[aria-pressed=true]{color:#8b6514;background:#fff3d6;box-shadow:inset 0 0 0 1px #efd59a}
+.form-error{color:#a74e47;min-height:1.8em;margin:6px 0 0}
+#therapist-code{letter-spacing:.4em;text-align:center;font-size:22px;direction:ltr}
+
+/* Home */
+body[data-view=home] main{justify-content:center;gap:clamp(8px,2.5vh,26px)}
+.dash-hero{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2vw,18px);margin:0;text-align:start}
+.dash-hero img{width:clamp(56px,13vh,130px);margin:0}
+.dash-hero h1,.dash-hero p{margin:0}
+.today-slot{width:100%;max-width:820px;margin:0 auto}
+.today{margin:0;gap:clamp(8px,1.6vh,14px)}
+.today-steps li{padding:clamp(6px,1.2vh,12px) 14px}
+
+/* Road: stations are placed by script to fill this box */
+.road{flex:1 1 auto;min-height:0;width:100%;max-width:none;height:auto!important;margin:0}
+.road-line path{stroke-width:calc(var(--dot,64px)*.38)}
+.station{width:auto;gap:2px;padding:2px}
+.station .dot{width:var(--dot);height:var(--dot);font-size:calc(var(--dot)*.36)}
+.station.now .dot{width:calc(var(--dot)*1.16);height:calc(var(--dot)*1.16)}
+.station .dot svg,.station.done .dot svg{width:calc(var(--dot)*.48);height:calc(var(--dot)*.48)}
+.station-label{font-size:clamp(10.5px,1.6vh,13px);line-height:1.35;white-space:normal;text-align:center}
+.pin{top:-12px}
+.day-step{min-height:clamp(58px,10vh,86px)}
+
+/* Games and practice lists: one screen of tiles */
+.game-grid,.skills{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(max(104px,15%),1fr));grid-auto-rows:minmax(0,1fr);gap:clamp(8px,1.4vh,14px)}
+.game-card{min-height:0;justify-content:center;padding:clamp(6px,1vh,14px) 6px;gap:2px;overflow:hidden}
+.game-card .game-art{flex:1 1 0;min-height:0;width:100%;height:100%;max-height:92px}
+.game-card b{font-size:clamp(13px,1.9vh,17px);text-align:center;line-height:1.3}
+.game-card small{font-size:clamp(11px,1.5vh,13px)}
+.skill{min-height:0;padding:8px;font-size:clamp(13px,2vh,17px);overflow:hidden}
+
+/* Game screen */
+.game{flex:1 1 auto;min-height:0!important;height:100%;gap:clamp(6px,1.2vh,10px)}
+.game-top{flex-wrap:nowrap}
+.game-stars{flex-wrap:nowrap;gap:2px}
+.game-stars svg{width:clamp(15px,4.4vw,28px);height:clamp(15px,4.4vw,28px)}
+.game-prompt{font-size:clamp(17px,min(3.6vw,3.6vh),28px);padding:clamp(4px,1vh,10px) 14px;line-height:1.5}
+.stage{flex:1 1 auto;min-height:0!important;container-type:size;padding:clamp(8px,1.6vh,16px);gap:clamp(8px,2vh,16px)}
+.bear{width:min(320px,70cqw,72cqh)}
+.cards{gap:clamp(6px,2cqw,14px)}
+.card-choice{width:min(150px,calc((100cqw - 14px*var(--n,4))/var(--n,4)),42cqh);min-width:0;padding:min(10px,2cqh)}
+.game[data-game=need] .card-choice,.game[data-game=train] .card-choice,.game[data-game=signal] .card-choice{width:min(150px,calc((100cqw - 14px*var(--n,4))/var(--n,4)),34cqh)}
+.balloon{width:min(120px,calc((100cqw - 14px*4)/4),46cqh);aspect-ratio:68/100}
+.balloon.small{width:min(84px,calc((100cqw - 14px*4)/5.5),32cqh)}
+.room .ref{width:min(460px,86cqw,64cqh)}
+.playroom .ref{width:min(330px,calc(50% - clamp(4px,1.5vw,20px)),52cqh)}
+.room .toy,.friend-tap{width:min(110px,22cqw,17cqh);min-width:0;padding:min(6px,1cqh)}
+.room .shelf{padding-bottom:min(12px,2cqh)}
+.need .friend{width:min(220px,44cqw,40cqh)}
+.feed .friend{width:min(200px,40cqw,36cqh)}
+.plate{width:min(220px,46cqw,38cqh)}
+.tray{min-height:0}
+.tray .fruit{width:min(100px,20cqw,17cqh);min-width:0}
+.check-done{height:min(60px,12cqh);min-height:40px}
+.train .engine svg{width:min(150px,30cqw,30cqh)}
+.wagon{width:min(122px,26cqw,26cqh);height:auto;aspect-ratio:1.5;margin-bottom:min(22px,4cqh)}
+.light{padding:min(14px,2.4cqh);gap:min(12px,2cqh)}
+.light i{width:min(62px,13cqh);height:min(62px,13cqh)}
+.shown svg{width:min(150px,36cqh);height:min(150px,36cqh)}
+.map{width:min(560px,100%,130cqh)}
+.stop{width:min(110px,21cqw,22cqh)}
+.car,.car svg{width:min(96px,16cqw,18cqh)}
+@container (orientation:portrait){.map{aspect-ratio:3/4;width:min(100%,72cqh)}.stop{width:min(110px,28cqw,19cqh)}}
+.game-done{flex:1 1 auto;min-height:0;align-content:center;padding:clamp(12px,3vh,30px) 16px}
+.trophy svg{width:min(120px,18vh);height:min(120px,18vh)}
+
+/* Practice and screening directions */
+body[data-view=task] .task{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin:0;padding:clamp(10px,2vh,24px)}
+.task h2{margin:clamp(6px,1.5vh,16px) auto;font-size:clamp(19px,min(4vw,3.6vh),32px);line-height:1.55}
+.task .options,.task .observe-art,.task .pictures{flex:1 1 auto;min-height:0;width:100%;margin:0}
+.task .observe-art:empty{display:none}
+.task .options{container-type:size;align-items:center;align-content:center}
+.task .option{width:min(180px,calc((100cqw - 16px*(var(--n,3) - 1))/var(--n,3)),94cqh);height:min(180px,94cqh);min-width:0;min-height:0}
+.task .observe-art{display:grid;place-items:center}
+.task .observe-art>svg{width:min(110px,16vh);height:min(110px,16vh)}
+.task .pictures{container-type:size;align-content:center;flex-wrap:nowrap}
+.task .pictures:not(.branches) .pic-card{width:min(200px,calc((100cqw - 44px*(var(--n,1) - 1))/var(--n,1)),calc(100cqh - 70px))}
+.task .pictures.branches .pic-card{width:min(170px,calc((100cqw - 60px)/2),calc(50cqh - 66px))}
+.task .pic-card figcaption{font-size:clamp(12px,1.8vh,16px)}
+.result-mark{height:clamp(22px,4vh,38px)}
+.task-controls,.ratings{margin-top:clamp(4px,1.2vh,18px)}
+.help-state{margin:4px 0 0;min-height:clamp(14px,2.4vh,22px)}
+
+@media(max-width:420px){
+ .tab{font-size:10.5px;padding-inline:0}.tab svg{width:22px;height:22px}
+ .game-controls button{min-width:40px;padding:8px}
+}
+@media(max-height:560px){
+ .dash-hero,body[data-view=home] footer{display:none}
+ .today-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .tab{flex-direction:row;justify-content:center;gap:4px;padding:4px}.tab svg{width:20px;height:20px}
+}
+/* Short landscape screens: the direction and its pictures on one side, the adult's controls on the other */
+@media(max-height:560px) and (orientation:landscape){
+ body[data-view=task] .task{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,34%);grid-template-rows:auto auto auto minmax(0,1fr) auto auto auto;column-gap:16px;align-items:center}
+ .task>.task-top,.task>.task-progress{grid-column:1/-1}
+ .task>h2{grid-column:1;grid-row:3}
+ .task>.pictures,.task>.options,.task>.observe-art{grid-column:1;grid-row:4/8;align-self:stretch;height:100%}
+ .task>.result-mark{grid-column:2;grid-row:3}
+ .task>.task-controls{grid-column:2;grid-row:4;align-self:end}
+ .task>.help-state{grid-column:2;grid-row:5}
+ .task>.ratings{grid-column:2;grid-row:6}
+}
+@media print{
+ html,body{height:auto;overflow:visible}
+ body{display:block}
+ main{display:block;overflow:visible;max-width:none}
+ #tabbar{display:none!important}
+}

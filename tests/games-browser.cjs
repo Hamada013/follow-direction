@@ -41,8 +41,8 @@ const rounds=new Map(GB.games.flatMap(g=>g.rounds.map(r=>[r.audio,{...r,type:g.t
    await page.locator('.game-done').waitFor();await noOverflow();await page.getByRole('button',{name:'تم',exact:true}).click();await page.locator('.game-grid').waitFor();
   }
   const played=await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('follow-direction-children-v1'));return d.children.find(c=>c.id===d.active).games;});
-  assert.equal(played.length,GB.games.length);assert.ok(played.every(g=>g.rounds===5&&g.firstTry<=5));
-  assert.equal(played.find(g=>g.group==='objects').firstTry,4,'The round with a wrong first tap is not a first-try success');
+  assert.equal(played.length,GB.games.length);assert.ok(played.every(g=>g.rounds===GB.ROUNDS_PER_PLAY&&g.firstTry<=GB.ROUNDS_PER_PLAY));
+  assert.equal(played.find(g=>g.group==='objects').firstTry,GB.ROUNDS_PER_PLAY-1,'The round with a wrong first tap is not a first-try success');
 
   // Day 1 of the plan: five practice directions, picture help recorded as help, then the day's game.
   await page.getByRole('button',{name:'الرئيسية',exact:true}).click();await page.getByRole('button',{name:'ابدأ تمرين اليوم',exact:true}).click();
@@ -57,8 +57,18 @@ const rounds=new Map(GB.games.flatMap(g=>g.rounds.map(r=>[r.audio,{...r,type:g.t
   await page.getByRole('button',{name:/^اليوم 2:/}).click();await page.getByRole('button',{name:'فتح اليوم (للأهل)'}).click();
   await page.locator('#parent-gate[open]').waitFor();const answer=await page.locator('#parent-gate').evaluate(d=>{const a=+d.querySelector('[data-left]').textContent,b=+d.querySelector('[data-right]').textContent;return d.querySelector('[data-operation]').textContent==='−'?a-b:a+b;});await page.locator(`#parent-gate [data-answer="${answer}"]`).click();
   await page.getByRole('heading',{name:'اليوم ٢',exact:true}).waitFor();assert.equal(await page.locator('.day-step').count(),3);
+  // Therapist mode: a wrong code changes nothing; 013 opens every day and step; turning it off locks them again.
+  const road=()=>page.locator('#tabbar').getByRole('button',{name:'الطريق',exact:true}).click();
+  await road();assert.ok(await page.locator('.station.locked').count()>0);
+  await page.locator('#tabbar').getByRole('button',{name:'وضع المعالج'}).click();await page.locator('#therapist-code').fill('123');await page.getByRole('button',{name:'فتح الكل'}).click();await page.getByText('الرمز غير صحيح.').waitFor();
+  await page.locator('#therapist-code').fill('013');await page.getByRole('button',{name:'فتح الكل'}).click();await page.locator('.road').waitFor();
+  assert.equal(await page.locator('.station.locked').count(),0);assert.equal(await page.locator('#tabbar .therapist').getAttribute('aria-pressed'),'true');
+  await page.getByRole('button',{name:/^اليوم 5:/}).click();await page.getByRole('heading',{name:'اليوم ٥',exact:true}).waitFor();assert.equal(await page.locator('.day-step:disabled').count(),0);
+  await page.reload();await road();assert.equal(await page.locator('.station.locked').count(),0,'Therapist mode stays on after reload');
+  await page.locator('#tabbar').getByRole('button',{name:'وضع المعالج'}).click();await page.getByRole('button',{name:'إيقاف وضع المعالج'}).click();
+  await road();assert.ok(await page.locator('.station.locked').count()>0);
   // The report shows the plan, practice and play.
-  await page.locator('#toolbar').getByRole('button',{name:'التقرير',exact:true}).click();
+  await page.locator('#tabbar').getByRole('button',{name:'التقرير',exact:true}).click();
   assert.match(await page.locator('.overview').innerText(),/1\/12|١\/١٢/);assert.equal(await page.locator('.profile-row:not(.head)').count(),11);await noOverflow();
   await page.setViewportSize({width:390,height:844});await noOverflow();
   assert.deepEqual(errors,[]);

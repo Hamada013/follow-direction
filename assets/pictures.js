@@ -9,7 +9,10 @@
  const nest=(drawing,x,y,w)=>`<svg x="${x}" y="${y}" width="${w}" height="${w}" viewBox="0 0 100 100">${drawing}</svg>`;
  const objects=new Map(Object.entries(bank.objects).map(([key,o])=>['ال'+strip(o.label),key]));
  const art=(key,color)=>{const d=bank.objects[key].drawing;return color?d.replace(/fill="#[0-9a-f]{3,6}"/i,`fill="${color}"`):d;};
- const closedBook='<path d="M28 20h44v62H28Z" fill="#9fc7af"/><path d="M36 20v62M44 34h20"/>';
+ const closedBook='<path d="M26 14h46a4 4 0 0 1 4 4v66a4 4 0 0 1-4 4H26Z" fill="#5fae86"/><path d="M26 14h10v74H26Z" fill="#1d3b50" opacity=".15" stroke="none"/><rect x="44" y="28" width="22" height="12" rx="2" fill="#fffdf6"/><path d="M72 22v58" stroke="#fff" stroke-width="3" opacity=".5"/>';
+ // The box splits into the part behind a toy (inside and flaps) and the part in front (its face),
+ // so a toy placed inside peeks out of it. Other objects have nothing behind.
+ const layers=key=>{const d=art(key);if(key!=='box')return ['',d];const parts=d.match(/<[^>]+\/>/g);return [parts.slice(1,3).join(''),parts[0]+parts.slice(3).join('')];};
 
  // A front-facing child. `arms` replaces the resting arms; `mark` highlights a point.
  function figure({arms,mark,extra=''}={}){
@@ -40,9 +43,9 @@
  function scene(x,prep,y,moving=true,colorX){
   const X=art(x,colorX),Y=art(y);
   switch(prep){
-   case 'in':return nest(Y,22,34,56)+nest(X,38,46,24)+(moving?arrow('M50 6v22m-6-6 6 6 6-6'):'');
-   case 'on':return nest(Y,22,40,56)+nest(X,36,8,28)+(moving?arrow('M16 10v20m-5-5 5 5 5-5'):'');
-   case 'under':return nest(Y,20,6,60)+nest(X,37,66,28)+(moving?arrow('M14 60v24m-5-5 5 5 5-5'):'');
+   case 'in':{const [back,front]=layers(y);return nest(back,22,34,56)+nest(X,36,40,28)+nest(front,22,34,56)+(moving?arrow('M50 4v20m-6-6 6 6 6-6'):'');}
+   case 'on':return nest(Y,22,40,56)+nest(X,34,28,32)+(moving?arrow('M16 10v20m-5-5 5 5 5-5'):'');
+   case 'under':return nest(X,37,46,26)+nest(Y,16,6,68)+(moving?arrow('M14 60v24m-5-5 5 5 5-5'):'');
    case 'beside':return nest(Y,42,26,54)+nest(X,6,50,32);
    case 'front':return nest(Y,26,12,52)+nest(X,32,48,40);
    case 'behind':return nest(X,44,6,30)+`<rect x="26" y="30" width="52" height="52" rx="6" fill="#fff" stroke="none"/>`+nest(Y,24,28,56);
@@ -92,6 +95,6 @@
   const parts=text.replace(/[.]+$/,'').split(/،\s*ثم\s*/);
   return {type:'steps',steps:parts.map(part=>({svg:svg(action(strip(part),ctx)),text:part.trim()}))};
  }
- const api={describe,art,strip,svg,nest,COLORS,BODY,PARTS};
+ const api={describe,art,layers,strip,svg,nest,COLORS,BODY,PARTS};
  if(typeof module!=='undefined')module.exports=api;else root.FollowPictures=api;
 })(globalThis);
