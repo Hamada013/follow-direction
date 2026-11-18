@@ -14,23 +14,40 @@
  // so a toy placed inside peeks out of it. Other objects have nothing behind.
  const layers=key=>{const d=art(key);if(key!=='box')return ['',d];const parts=d.match(/<[^>]+\/>/g);return [parts.slice(1,3).join(''),parts[0]+parts.slice(3).join('')];};
 
- // A front-facing child. `arms` replaces the resting arms; `mark` highlights a point.
- function figure({arms,mark,extra=''}={}){
-  const resting='<path d="M39 42 31 66M61 42l8 24"/>';
-  return `${mark?`<circle cx="${mark[0]}" cy="${mark[1]}" r="7" fill="${MARK}" stroke="none" opacity=".75"/>`:''}<path d="M39 40h22l3 30H36Z" fill="${SHIRT}"/><path d="M44 70v25h-5m17-25v25h5"/><circle cx="50" cy="22" r="12" fill="${SKIN}"/><path d="M38.5 19c1-10 22-10 23 0"/><circle cx="45.5" cy="21" r="1.2" fill="currentColor"/><circle cx="54.5" cy="21" r="1.2" fill="currentColor"/><path d="M46 28.5q4 3 8 0"/>${arms??resting}${extra}`;
+ // A front-facing child with ears and a nose. `arms` replaces the resting arms (paths are drawn as
+ // skin-coloured limbs), `legs` the standing legs, and `mark` rings the body part over the drawing.
+ const limbs=s=>s.replace(/<path d="([^"]+)"\/>/g,(_,d)=>`<path d="${d}" stroke-width="6"/><path d="${d}" stroke="${SKIN}" stroke-width="3"/>`);
+ const hand=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.8" fill="${SKIN}"/>`;
+ const ring=([x,y])=>`<circle cx="${x}" cy="${y}" r="6.5" fill="${MARK}" fill-opacity=".3" stroke="${MARK}" stroke-width="2.4"/>`;
+ function figure({arms,legs,mark,extra=''}={}){
+  const resting='<path d="M39 42 33 64M61 42l6 22"/>'+hand(33,66)+hand(67,66);
+  return `<path d="M39 40h22l3 30H36Z" fill="${SHIRT}"/>${legs??'<path d="M44 70v25h-5m17-25v25h5"/>'}<circle cx="37.5" cy="23" r="3" fill="${SKIN}"/><circle cx="62.5" cy="23" r="3" fill="${SKIN}"/><circle cx="50" cy="22" r="12" fill="${SKIN}"/><path d="M38.5 19c1-10 22-10 23 0"/><circle cx="45.5" cy="20" r="1.2" fill="currentColor"/><circle cx="54.5" cy="20" r="1.2" fill="currentColor"/><path d="M50 22.5v2.5h1.2" stroke-width="1.6"/><path d="M46 28.5q4 3 8 0"/>${mark?ring(mark):''}${limbs(arms??resting)}${extra}`;
  }
- const PARTS={رأسك:[50,10],شعرك:[42,13],أنفك:[50,24.5],أذنك:[62.5,22],خدك:[56.5,27],ذقنك:[50,34],كتفك:[39,41],بطنك:[50,56],ركبتك:[56,83],قدمك:[57,95]};
- const touch=([x,y])=>figure({mark:[x,y],arms:`<path d="M39 42 31 66"/><path d="M61 42 ${y<40?72:70} ${Math.max(30,(42+y)/2)} ${x} ${y}"/><circle cx="${x}" cy="${y}" r="2.6" fill="#fff"/>`});
+ // Each part: where it is, the arm that reaches it (shoulder, elbow, hand), and a pose for the legs.
+ const POSE={
+  رأسك:{at:[50,10],arm:'M61 42 73 28 57 11',hand:[57,11]},
+  شعرك:{at:[43,12],arm:'M39 42 27 28 41 12',hand:[41,12]},
+  أنفك:{at:[50,24],arm:'M61 42 70 36 53 25',hand:[53.5,25.5]},
+  أذنك:{at:[62.5,23],arm:'M61 42 72 36 65.5 24',hand:[66,24]},
+  خدك:{at:[56,26],arm:'M61 42 71 37 59 27',hand:[59.5,27.5]},
+  ذقنك:{at:[50,33.5],arm:'M61 42 66 44 52 35',hand:[52.5,35.5]},
+  كتفك:{at:[60,42],arm:'M39 42 46 54 57 44',hand:[57.5,44.5]},
+  بطنك:{at:[50,57],arm:'M61 42 66 54 54 57',hand:[54,57.5]},
+  ركبتك:{at:[64,76],arm:'M61 42 71 57 67 72',hand:[67,72.5],legs:'<path d="M44 70v25h-5m12-25 8 6-4 13h5" stroke-width="3"/>'},
+  قدمك:{at:[79,86],arm:'M61 42 73 60 77 82',hand:[77,83],legs:'<path d="M44 70v25h-5m12-25 13 12 10 3"/>'}
+ };
+ const PARTS=Object.fromEntries(Object.entries(POSE).map(([k,v])=>[k,v.at]));
+ const touch=part=>{const p=POSE[part];return figure({mark:p.at,legs:p.legs,arms:`<path d="M39 42 33 64"/>${hand(33,66)}<path d="${p.arm}"/>${hand(...p.hand)}`});};
  const handOpen=`<g stroke-width="9"><path d="M41 52 37 27M48 50l-1-27M55 50l1-27M61 53l4-24M37 64 25 53"/></g><g stroke="${SKIN}" stroke-width="5"><path d="M41 52 37 27M48 50l-1-27M55 50l1-27M61 53l4-24M37 64 25 53"/></g><rect x="35" y="44" width="30" height="38" rx="12" fill="${SKIN}"/><path d="M42 50l-1 4M48 49v5M55 49v5"  stroke="${SKIN}" stroke-width="5"/>`;
  const fist=`<rect x="31" y="38" width="38" height="36" rx="13" fill="${SKIN}"/><path d="M41 38v11M50 38v11M59 38v11M31 58h15c4 0 4 6 0 6h-7"/>`;
  const BODY={
-  clap:figure({arms:'<path d="M39 42 42 55 49 52M61 42 58 55 51 52"/>',extra:`<path d="m43 45-4-4m18 4 4-4M50 43v-5" stroke="${MARK}"/>`}),
+  clap:figure({arms:'<path d="M39 42 42 55 47 50M61 42 58 55 53 50"/>'+hand(47.5,49.5)+hand(52.5,49.5),extra:`<path d="m43 45-4-4m18 4 4-4M50 43v-5" stroke="${MARK}"/>`}),
   wave:figure({arms:'<path d="M39 42 31 66M61 42 72 32 74 18"/><circle cx="74" cy="15" r="3.4" fill="'+SKIN+'"/>',extra:`<path d="M80 10q4 5 0 10m4-13q6 8 0 16" stroke="${MARK}"/>`}),
   raise:figure({arms:'<path d="M39 42 30 26 28 10M61 42l9-16 2-16"/>',extra:`<path d="M18 30V16m-4 4 4-4 4 4M82 30V16m-4 4 4-4 4 4" stroke="${MARK}"/>`}),
   raiseOne:figure({arms:'<path d="M39 42 31 66M61 42l9-16 2-16"/><circle cx="72" cy="8" r="3.4" fill="'+SKIN+'"/>',extra:`<path d="M84 30V16m-4 4 4-4 4 4" stroke="${MARK}"/>`}),
   lower:figure({arms:'<path d="M39 42 36 70M61 42l3 28"/>',extra:`<path d="M24 52v14m-4-4 4 4 4-4M76 52v14m-4-4 4 4 4-4" stroke="${MARK}"/>`}),
   mouth:figure({mark:[50,29],extra:'<ellipse cx="50" cy="29" rx="3" ry="2.6" fill="#fff"/>'}),
-  smile:figure({mark:[50,28],extra:'<path d="M44 27q6 6 12 0" stroke-width="3"/>'}),
+  smile:figure({extra:`<path d="M43.5 26.5q6.5 7 13 0" stroke-width="3"/><path d="M36 30q-3 2-2 5m30-5q3 2 2 5" stroke="${MARK}"/>`}),
   self:figure({mark:[50,50],arms:'<path d="M39 42 31 66M61 42l7 12-15-4"/>'}),
   table:figure({arms:'<path d="M39 42 37 60M61 42l2 18"/>',extra:'<path d="M18 61h64M24 61v34m52-34v34" stroke-width="4"/>'}),
   open:handOpen,
@@ -62,7 +79,7 @@
  // One action: a body movement, giving a toy, or placing a toy. `ctx` remembers "it".
  function action(text,ctx){
   if(ACTIONS[text])return BODY[ACTIONS[text]];
-  let m=text.match(/^المس (\S+)$/);if(m&&PARTS[m[1]])return touch(PARTS[m[1]]);
+  let m=text.match(/^المس (\S+)$/);if(m&&POSE[m[1]])return touch(m[1]);
   m=text.match(new RegExp('^أعطني '+WORDS+'$'));if(m){const x=noun(m[1]);ctx.it=x;return give(x);}
   m=text.match(new RegExp('^ضع '+WORDS+' بين '+WORDS+' و'+WORDS+'$'));if(m)return between(noun(m[1]),noun(m[2]),noun(m[3]));
   m=text.match(new RegExp('^ضع(ها|ه)?(?: '+WORDS+')? (\\S+) '+WORDS+'$'));

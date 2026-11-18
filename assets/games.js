@@ -65,7 +65,8 @@
   function next(won){stop();index++;step=0;errors=0;selected=null;if(index>=rounds.length)return done();show();}
   function done(){finished=true;stop();drawStars();onFinish({rounds:rounds.length,firstTry});
    root.innerHTML=`<div class="game-done"><div class="trophy">${icon('star')}</div><h2>أحسنت!</h2><p class="done-stars">${rounds.map((_,i)=>`<span class="on">${icon('star')}</span>`).join('')}</p><div class="done-actions"></div></div>`;
-   const actions=root.querySelector('.done-actions');actions.append(btn('repeat','العب مرة أخرى',()=>play({host,group,icon,media,onFinish,onExit,label}),'big'),btn('check','تم',onExit,'big primary'));actions.lastChild.focus();}
+   const actions=root.querySelector('.done-actions');actions.append(btn('repeat','العب مرة أخرى',()=>{stop();play({host,group,icon,media,onFinish,onExit,label});},'big'),btn('check','تم',onExit,'big primary'));actions.lastChild.focus();
+   const praise=`assets/audio/${GB.PRAISE.audio}.mp3`;if(media.includes(praise)){audio=new Audio(praise);audio.play().catch(()=>{});}}
   function el(html,cls,attrs={}){const e=document.createElement('button');e.type='button';e.className=cls;e.innerHTML=html;for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);return e;}
   // Drag with a finger or mouse; a plain tap selects, then tapping a zone places.
   function draggable(item,onDrop){

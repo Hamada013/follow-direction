@@ -9,11 +9,11 @@
  const shortDate=x=>{const d=new Date(x);return Number.isFinite(+d)?d.toLocaleDateString('ar-SY',{day:'numeric',month:'short'}):'';};
  const num=n=>Number(n).toLocaleString('ar-SY');
  const label=group=>B.groups.find(g=>g.id===group)?.label||'';
- const celebrated=new Set();let store,view='home',reportId=null,audio=null,toastTimer,dayView=0,gameCtx=null,gameHandle=null;
+ const celebrated=new Set();let supportTimer=null,store,view='home',reportId=null,audio=null,toastTimer,dayView=0,gameCtx=null,gameHandle=null;
  function alert(message){$('#status').textContent=message;$('#status').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{$('#status').hidden=true;},9000);}
  function run(fn){try{return fn();}catch(e){alert(e.message||'تعذّر حفظ التقدم.');return null;}}
  function button(name,text,fn,cls=''){const b=document.createElement('button');b.type='button';b.className=cls;b.setAttribute('aria-label',text);b.title=text;b.innerHTML=icon(name);b.onclick=fn;return b;}
- function stop(){if(audio){audio.pause();audio=null;}gameHandle?.stop();gameHandle=null;}
+ function stop(){clearTimeout(supportTimer);if(audio){audio.pause();audio=null;}gameHandle?.stop();gameHandle=null;}
  function showModal(title,html,actions=[]){$('#modal-title').textContent=title;$('#modal-body').innerHTML=html;const row=document.createElement('div');row.className='dialog-actions';for(const [text,fn]of actions){const b=document.createElement('button');b.className='primary';b.textContent=text;b.onclick=()=>{$('#modal').close();fn();};row.append(b);}$('#modal-body').append(row);$('#modal').showModal();}
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
  // Header keeps account, guide and offline download; the bottom bar moves between screens.
@@ -45,65 +45,71 @@
  }
 
  // ---------- Dashboard ----------
- function today(){const program=store.program(),day=PR.currentDay(program),lock=lockOf(program,day),finished=PR.isDayDone(program.done,PR.DAYS.length-1);return {program,day,lock,finished,next:PR.nextStep(program,day)};}
+ // When a round ends, the next one repeats every skill not yet mastered. With all mastered, the road is done.
+ function ensureRound(){const next=PR.nextRound(store.program(),store.mastered());if(next?.length)run(()=>store.startRound(next));return next?.length===0;}
+ function today(){const allMastered=ensureRound(),program=store.program(),day=PR.currentDay(program),lock=lockOf(program,day),finished=allMastered&&PR.roundDone(program);return {program,day,lock,finished,next:PR.nextStep(program,day)};}
+ // Day numbers restart in each round: {round, n, of}.
+ function dayNo(program,d){const round=PR.roundOf(program,d),[first,end]=PR.roundRange(program,round);return {round,n:d-first+1,of:end-first};}
+ const dayTitle=(program,d)=>{const x=dayNo(program,d);return `${x.round>1?`الجولة ${num(x.round)} · `:''}اليوم ${num(x.n)}`;};
  const stepTitle=s=>s.type==='game'?GB.byGroup(s.group).title:`تدريب · ${label(s.group)}`;
  const stepIcon=s=>s.type==='game'?'game':'ear';
- function dayName(day){return day<PR.ORDER.length?label(PR.focus(day)):'يوم الاحتفال';}
+ function dayName(program,day){const f=PR.focus(program,day);return f?label(f):'يوم المراجعة';}
  // The dashboard: greeting and today's workout. Moving between screens is the bottom bar's job.
  function home(){const child=store.active(),draft=child&&store.draft();
   app.innerHTML=`<section class="hero dash-hero"><img src="assets/logo.webp" alt="" width="164" height="164"><div><h1>اتبع التعليمات</h1><p>${child?'مرحبًا، '+esc(child.name):'Follow Direction'}</p></div></section><div class="today-slot"></div>`;
   if(child)todayCard(app.querySelector('.today-slot'),draft);
   else{const b=button('user','اختيار حساب الطفل',profiles,'primary big start');b.insertAdjacentHTML('beforeend','<span>اختر حساب الطفل للبدء</span>');app.querySelector('.today-slot').append(b);}
  }
- function todayCard(host,draft){const t=today(),done=PR.daysDone(t.program);
+ function todayCard(host,draft){const t=today(),x=dayNo(t.program,t.day),[first,end]=PR.roundRange(t.program,x.round),inRound=Array.from({length:end-first},(_,i)=>first+i),done=inRound.filter(d=>PR.isDayDone(t.program,d)).length;
   const section=document.createElement('section');section.className='card today';
-  const head=`<div class="today-head"><span class="day-badge">${t.finished?icon('star'):num(t.day+1)}</span><div><p class="muted">${t.finished?'أكملت الطريق':`تمرين اليوم ${num(t.day+1)} من ${num(PR.DAYS.length)}`}</p><h2>${esc(t.finished?'أحسنت! يمكنك اللعب متى شئت':dayName(t.day))}</h2></div><div class="mini-road" role="img" aria-label="أيام مكتملة: ${done} من ${PR.DAYS.length}">${PR.DAYS.map((_,d)=>`<i class="${PR.isDayDone(t.program.done,d)?'done':d===t.day?'now':''}"></i>`).join('')}</div></div>`;
+  const head=`<div class="today-head"><span class="day-badge">${t.finished?icon('star'):num(t.day+1)}</span><div><p class="muted">${t.finished?'أتقن الطفل كل المهارات':`${x.round>1?`الجولة ${num(x.round)} · `:''}تمرين اليوم ${num(x.n)} من ${num(x.of)}`}</p><h2>${esc(t.finished?'أحسنت! يمكنك اللعب متى شئت':dayName(t.program,t.day))}</h2></div><div class="mini-road" role="img" aria-label="أيام مكتملة: ${done} من ${inRound.length}">${inRound.map(d=>`<i class="${PR.isDayDone(t.program,d)?'done':d===t.day?'now':''}"></i>`).join('')}</div></div>`;
   if(t.finished){section.innerHTML=head;host.append(section);return;}
   if(t.lock==='tomorrow'){section.innerHTML=head+`<p class="rest">${icon('moon')}<span>أحسنت اليوم! التمرين التالي يُفتح غدًا. يمكنك اللعب بالألعاب الآن.</span></p>`;host.append(section);return;}
-  section.innerHTML=head+`<ol class="today-steps">${PR.DAYS[t.day].map((s,i)=>`<li class="${PR.isStepDone(t.program.done,t.day,i)?'done':i===t.next?'now':''}">${icon(PR.isStepDone(t.program.done,t.day,i)?'check':stepIcon(s))}<span>${esc(stepTitle(s))}</span></li>`).join('')}</ol>`;
+  section.innerHTML=head+`<ol class="today-steps">${PR.days(t.program)[t.day].steps.map((s,i)=>`<li class="${PR.isStepDone(t.program.done,t.day,i)?'done':i===t.next?'now':''}">${icon(PR.isStepDone(t.program.done,t.day,i)?'check':stepIcon(s))}<span>${esc(stepTitle(s))}</span></li>`).join('')}</ol>`;
   const start=button('play',t.next>0?'تابع تمرين اليوم':'ابدأ تمرين اليوم',()=>runStep(t.day,t.next),'primary big start');start.insertAdjacentHTML('beforeend',`<span>${t.next>0?'تابع تمرين اليوم':'ابدأ تمرين اليوم'}</span>`);section.append(start);host.append(section);
  }
  function confirmStart(mode,group){if(store.draft()){showModal('جلسة محفوظة','<p>تابع الجلسة الحالية أو أنهها قبل بدء جلسة جديدة.</p>',[['متابعة',()=>go('task')],['إنهاء الجلسة',endSession]]);return;}
   if(mode==='screen')showModal('الفرز','<p>٣٣ مهمة قصيرة. يمكنك التوقف والمتابعة لاحقًا. لا تستخدم نموذجًا أو تلميحًا أو بطاقات مصوّرة عند تسجيل الاستجابة المستقلة.</p>',[['ابدأ',()=>start(mode,group)]]);
   else if(store.passes().has(group))showModal('تم التحقق في الفرز','<p>هذه المهارة محددة للتجاوز. هل تريد إعادة تدريبها؟</p>',[['تدريبها',()=>start(mode,group)]]);else start(mode,group);
  }
- function start(mode,group,options){if(run(()=>store.start(mode,group,options)))go('task');}
+ function start(mode,group,options={}){if(mode==='practice'&&group&&!options.support)options={...options,support:store.support(group)};if(run(()=>store.start(mode,group,options)))go('task');}
 
  // ---------- Road and days ----------
- function runStep(day,i){const s=PR.DAYS[day][i];if(!s)return;
+ function runStep(day,i){const s=PR.days(store.program())[day]?.steps[i];if(!s)return;
   if(s.type==='game'){gameCtx={group:s.group,day,step:i};go('game');return;}
   if(store.draft()){showModal('جلسة محفوظة','<p>تابع الجلسة الحالية أو أنهها قبل بدء تدريب اليوم.</p>',[['متابعة',()=>go('task')],['إنهاء الجلسة',endSession]]);return;}
   start('practice',s.group,{items:store.nextPractice(s.group,s.count),day,step:i});
  }
  function openDay(d){const program=store.program(),lock=lockOf(program,d);
-  if(lock==='earlier'){showModal(`اليوم ${num(d+1)}`,'<p>أكمل الأيام السابقة أولًا.</p>',[['فتح اليوم (للأهل)',()=>adultOpen(d)]]);return;}
-  if(lock==='tomorrow'){showModal(`اليوم ${num(d+1)}`,'<p>يُفتح يوم جديد كل يوم. عُد غدًا، أو افتحه الآن بإذن الأهل.</p>',[['فتح اليوم (للأهل)',()=>adultOpen(d)]]);return;}
+  if(lock==='earlier'){showModal(dayTitle(program,d),'<p>أكمل الأيام السابقة أولًا.</p>',[['فتح اليوم (للأهل)',()=>adultOpen(d)]]);return;}
+  if(lock==='tomorrow'){showModal(dayTitle(program,d),'<p>يُفتح يوم جديد كل يوم. عُد غدًا، أو افتحه الآن بإذن الأهل.</p>',[['فتح اليوم (للأهل)',()=>adultOpen(d)]]);return;}
   dayView=d;go('day');
  }
  async function adultOpen(d){if(!(await ChildAccountGate.request()))return;if(run(()=>store.unlockDay(d))!==null){dayView=d;go('day');}}
  // Twelve stations on a winding road that always fits the screen: rows of 4 (3 on narrow screens),
  // read right to left, each row turning back under the one above.
- function road(){const program=store.program(),current=PR.currentDay(program),child=store.active();
-  app.innerHTML=`<div class="section-heading"><h1>الطريق</h1><p class="muted">${num(PR.daysDone(program))} من ${num(PR.DAYS.length)} أيام${therapist?' · وضع المعالج: كل الأيام مفتوحة':''}</p></div><div class="road" role="group" aria-label="أيام الطريق"></div>`;
-  const host=app.querySelector('.road'),w=host.clientWidth||600,h=host.clientHeight||600,cols=w>=560?4:3,rows=Math.ceil(PR.DAYS.length/cols),cw=w/cols,ch=h/rows;
-  const points=PR.DAYS.map((_,d)=>{const r=Math.floor(d/cols),c=d%cols,fromRight=r%2?cols-1-c:c;return [w-(fromRight+.5)*cw,(r+.5)*ch];});
+ function road(){ensureRound();const program=store.program(),current=PR.currentDay(program),child=store.active(),round=PR.roundOf(program,current),[first,end]=PR.roundRange(program,round),list=Array.from({length:end-first},(_,i)=>first+i);
+  const doneHere=list.filter(d=>PR.isDayDone(program,d)).length,mastered=store.mastered().size;
+  app.innerHTML=`<div class="section-heading"><h1>الطريق${round>1?` · الجولة ${num(round)}`:''}</h1><p class="muted">${num(doneHere)} من ${num(list.length)} أيام · أتقن ${num(mastered)} من ${num(B.groups.length)} مهارات${therapist?' · وضع المعالج: كل الأيام مفتوحة':''}</p></div><div class="road" role="group" aria-label="أيام الطريق"></div>`;
+  const host=app.querySelector('.road'),w=host.clientWidth||600,h=host.clientHeight||600,cols=w>=560?(list.length>16?5:4):3,rows=Math.ceil(list.length/cols),cw=w/cols,ch=h/rows;
+  const points=list.map((_,d)=>{const r=Math.floor(d/cols),c=d%cols,fromRight=r%2?cols-1-c:c;return [w-(fromRight+.5)*cw,(r+.5)*ch];});
   host.style.setProperty('--dot',Math.round(Math.max(38,Math.min(68,ch*.42,cw*.5)))+'px');
   const turn=Math.min(cw*.45,60),path=points.map(([x,y],i)=>{if(!i)return `M${x} ${y}`;const [px,py]=points[i-1];if(py===y)return `L${x} ${y}`;const out=Math.floor(i/cols)%2?-turn:turn;return `C${px+out} ${py} ${x+out} ${y} ${x} ${y}`;}).join(' ');
   host.innerHTML=`<svg class="road-line" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${path}"/></svg>`;
-  PR.DAYS.forEach((_,d)=>{const done=PR.isDayDone(program.done,d),lock=lockOf(program,d),[x,y]=points[d];
+  list.forEach((d,k)=>{const done=PR.isDayDone(program,d),lock=lockOf(program,d),[x,y]=points[k];
    const b=document.createElement('button');b.type='button';b.className='station'+(done?' done':'')+(d===current?' now':'')+(lock?' locked':'');
-   b.setAttribute('aria-label',`اليوم ${d+1}: ${dayName(d)}${done?'، مكتمل':lock?'، مقفل':d===current?'، اليوم الحالي':''}`);b.style.left=100*x/w+'%';b.style.top=100*y/h+'%';b.style.width=Math.min(cw-6,130)+'px';
-   b.innerHTML=`<span class="dot">${done?icon('star'):lock?icon('lock'):`<b>${num(d+1)}</b>`}</span><span class="station-label">${esc(dayName(d))}</span>`;b.onclick=()=>openDay(d);host.append(b);
+   b.setAttribute('aria-label',`اليوم ${k+1}: ${dayName(program,d)}${done?'، مكتمل':lock?'، مقفل':d===current?'، اليوم الحالي':''}`);b.style.left=100*x/w+'%';b.style.top=100*y/h+'%';b.style.width=Math.min(cw-6,130)+'px';
+   b.innerHTML=`<span class="dot">${done?icon('star'):lock?icon('lock'):`<b>${num(k+1)}</b>`}</span><span class="station-label">${esc(dayName(program,d))}</span>`;b.onclick=()=>openDay(d);host.append(b);
    if(d===current&&child){const pin=document.createElement('span');pin.className='pin';pin.setAttribute('aria-hidden','true');const avatar=SuiteAccounts.badge?.(child);if(avatar)pin.append(avatar);b.append(pin);}
   });
  }
  function day(){const program=store.program(),d=dayView,next=PR.nextStep(program,d),lock=lockOf(program,d);
-  app.innerHTML=`<div class="section-heading"><h1>اليوم ${num(d+1)}</h1></div><p class="muted day-sub">${esc(dayName(d))}</p><div class="day-steps"></div>`;
+  app.innerHTML=`<div class="section-heading"><h1>${dayTitle(program,d)}</h1></div><p class="muted day-sub">${esc(dayName(program,d))}</p><div class="day-steps"></div>`;
   const host=app.querySelector('.day-steps');
-  PR.DAYS[d].forEach((s,i)=>{const done=PR.isStepDone(program.done,d,i),open=therapist||(!lock&&(done||i===next));
+  PR.days(program)[d].steps.forEach((s,i)=>{const done=PR.isStepDone(program.done,d,i),open=therapist||(!lock&&(done||i===next));
    const b=button(done?'check':stepIcon(s),`${stepTitle(s)}${done?'، مكتمل':open?'':'، بعد الخطوة السابقة'}`,()=>runStep(d,i),'day-step'+(done?' done':'')+(i===next?' now':''));b.disabled=!open;
    b.insertAdjacentHTML('beforeend',`<span><b>${esc(stepTitle(s))}</b><small>${s.type==='game'?(s.warmup?'لعبة تسخين':'لعبة اليوم'):'خمس تعليمات قصيرة'}</small></span>`);host.append(b);});
-  if(program.unlocked[d]&&!PR.DAYS[d].some((_,i)=>PR.isStepDone(program.done,d,i))){const relock=button('lock','إقفال هذا اليوم مرة أخرى',()=>run(()=>{store.unlockDay(d,false);go('road');}),'ghost');relock.insertAdjacentHTML('beforeend','<span>إقفال هذا اليوم مرة أخرى</span>');app.append(relock);}
+  if(program.unlocked[d]&&!PR.days(program)[d].steps.some((_,i)=>PR.isStepDone(program.done,d,i))){const relock=button('lock','إقفال هذا اليوم مرة أخرى',()=>run(()=>{store.unlockDay(d,false);go('road');}),'ghost');relock.insertAdjacentHTML('beforeend','<span>إقفال هذا اليوم مرة أخرى</span>');app.append(relock);}
  }
 
  // ---------- Games ----------
@@ -138,14 +144,22 @@
  function pictureStrip(item){const d=PIC.describe(item.prompt),card=(c,n)=>`<figure class="pic-card">${n?`<span class="pic-n">${num(n)}</span>`:''}${c.svg}<figcaption>${esc(c.text)}</figcaption></figure>`;
   if(d.type==='steps')return `<div class="pictures" style="--n:${d.steps.length}" aria-label="بطاقات مصوّرة">${d.steps.map((s,i)=>card(s,d.steps.length>1?i+1:0)).join(`<span class="pic-then" aria-hidden="true">${icon('back')}</span>`)}</div>`;
   return `<div class="pictures branches" aria-label="بطاقات مصوّرة">${d.branches.map(b=>`<div class="branch">${card(b.when)}<span class="pic-then" aria-hidden="true">${icon('back')}</span>${card(b.then)}</div>`).join('')}</div>`;}
- function task(){const s=store.draft();if(!s){reportId=store.active().sessions.at(-1)?.id;view='report';report();return;}const item=B.items.find(i=>i.id===s.items[s.results.length]),g=B.groups.find(g=>g.id===item.group),choice=item.kind!=='observe';
-  const where=Number.isInteger(s.day)?`اليوم ${num(s.day+1)} · ${esc(g.label)}`:`${s.mode==='screen'?'الفرز':'التدريب'} · ${esc(g.label)}`;
-  app.innerHTML=`<section class="card task"><div class="task-top"><p>${where}</p><span>${s.results.length+1} / ${s.items.length}</span></div><progress class="task-progress" value="${s.results.length}" max="${s.items.length}" aria-label="تقدم الجلسة"></progress><h2>${esc(item.prompt)}</h2>${!choice&&s.pictures?pictureStrip(item):''}<div class="${choice?'options':'observe-art'}">${choice||s.pictures?'':icon('ear')}</div><div class="result-mark" role="status"></div><div class="task-controls"></div><p class="help-state">${s.pictures?'عُرضت بطاقات مصوّرة: تُسجَّل مساعدة':s.helped?'تم تسجيل تكرار أو مساعدة':''}</p><div class="ratings" aria-label="تسجيل استجابة الطفل"></div></section>`;
+ // Practice support fades with success: cards (or the answer pointed out) at once, after a wait, or only on request.
+ const SUPPORT_DELAY=5000,SUPPORT_TEXT={pictures:'الدعم: مساعدة مصوّرة فورًا',delay:'الدعم: مساعدة مصوّرة بعد ٥ ثوانٍ',none:'الدعم: التعليمات المنطوقة فقط'};
+ function supportStep(s,item,choice){clearTimeout(supportTimer);if(s.mode!=='practice'||!s.support||s.support==='none')return false;
+  const given=choice?s.hinted:s.pictures;if(given||choice&&s.selection.length)return false;
+  const give=()=>run(()=>choice?store.hint():store.showPictures());
+  if(s.support==='pictures'){give();return true;}
+  const at=s.results.length;supportTimer=setTimeout(()=>{const now=store.draft();if(view==='task'&&now?.id===s.id&&now.results.length===at&&!now.selection.length&&!(choice?now.hinted:now.pictures)&&give()!==null)task();},SUPPORT_DELAY);return false;}
+ function task(){let s=store.draft();if(!s){reportId=store.active().sessions.at(-1)?.id;view='report';report();return;}const item=B.items.find(i=>i.id===s.items[s.results.length]),g=B.groups.find(g=>g.id===item.group),choice=item.kind!=='observe';
+  if(supportStep(s,item,choice))s=store.draft();
+  const where=Number.isInteger(s.day)?`${dayTitle(store.program(),s.day)} · ${esc(g.label)}`:`${s.mode==='screen'?'الفرز':'التدريب'} · ${esc(g.label)}`;
+  app.innerHTML=`<section class="card task"><div class="task-top"><p>${where}</p><span>${s.results.length+1} / ${s.items.length}</span></div><progress class="task-progress" value="${s.results.length}" max="${s.items.length}" aria-label="تقدم الجلسة"></progress><h2>${esc(item.prompt)}</h2>${!choice&&s.pictures?pictureStrip(item):''}<div class="${choice?'options':'observe-art'}">${choice||s.pictures?'':icon('ear')}</div><div class="result-mark" role="status"></div><div class="task-controls"></div><p class="help-state">${s.pictures?'عُرضت بطاقات مصوّرة: تُسجَّل مساعدة':s.hinted?'أُشير إلى الجواب: تُسجَّل مساعدة':s.helped?'تم تسجيل تكرار أو مساعدة':''}${s.mode==='practice'&&s.support?`<small class="support-level">${SUPPORT_TEXT[s.support]}</small>`:''}</p><div class="ratings" aria-label="تسجيل استجابة الطفل"></div></section>`;
   const controls=app.querySelector('.task-controls'),ratings=app.querySelector('.ratings');
   controls.append(button('play','تشغيل التعليمات',()=>play(item)),button('repeat','تكرار أو إعادة المحاولة (مساعدة)',()=>{if(run(()=>store.retry())!==null)task();}));
   if(!choice&&!s.pictures)controls.append(button('picture','عرض بطاقات مصوّرة (مساعدة)',()=>{if(run(()=>store.showPictures())!==null)task();}));
   controls.append(button('book','تجهيز المهمة',()=>showModal('تجهيز المهمة',`<p>${esc(item.setup||(choice?'اعرض الخيارات واقرأ التعليمات دون الإشارة إلى الجواب.':'نفّذ أمام الطفل فقط في التدريب؛ سجّل أي نموذج أو تكييف كمساعدة.'))}</p>`)),button('flag','إنهاء الجلسة',endSession));
-  if(choice){const options=app.querySelector('.options');options.style.setProperty('--n',item.options.length);for(const key of item.options){const b=document.createElement('button');b.className='option'+(s.selection.includes(key)?' selected':'');b.setAttribute('aria-label',objectLabel(key));b.innerHTML=objectArt(key);const indexes=s.selection.map((v,i)=>v===key?i+1:0).filter(Boolean);if(indexes.length)b.insertAdjacentHTML('beforeend',`<span class="step">${indexes.join('،')}</span>`);b.disabled=s.selection.length>=item.answer.length;b.onclick=()=>{run(()=>{store.selectAnswer(key);task();});};options.append(b);}
+  if(choice){const options=app.querySelector('.options');options.style.setProperty('--n',item.options.length);for(const key of item.options){const b=document.createElement('button');b.className='option'+(s.selection.includes(key)?' selected':'')+(s.hinted&&item.answer.includes(key)?' hint':'');b.setAttribute('aria-label',objectLabel(key));b.innerHTML=objectArt(key);const indexes=s.selection.map((v,i)=>v===key?i+1:0).filter(Boolean);if(indexes.length)b.insertAdjacentHTML('beforeend',`<span class="step">${indexes.join('،')}</span>`);b.disabled=s.selection.length>=item.answer.length;b.onclick=()=>{run(()=>{store.selectAnswer(key);task();});};options.append(b);}
    if(s.selection.length===item.answer.length){const correct=s.selection.every((v,i)=>v===item.answer[i]);const mark=app.querySelector('.result-mark');mark.dataset.correct=correct;mark.innerHTML=icon(correct?'check':'cross');mark.setAttribute('aria-label',correct?'استجابة مطابقة':'استجابة غير مطابقة');
     // Incorrect first choices remain incorrect even after retry. Retry marks help.
     const score=correct?(s.helped?'help':'independent'):'incorrect';const b=button('back','تسجيل والمتابعة',()=>scoreItem(score));b.className='primary';ratings.append(b);
@@ -157,7 +171,8 @@
   const saved=store.active().sessions.find(x=>x.id===id);
   if(Number.isInteger(saved.day)&&saved.complete){store.markStep(saved.day,saved.step);celebrate(saved.day);return;}
   reportId=id;go('report');});}
- function celebrate(d){dayView=d;const done=PR.isDayDone(store.program().done,d);go(done?'home':'day');if(done&&!celebrated.has(d)){celebrated.add(d);showModal('أحسنت!',`<p class="cheer">${icon('star')}</p><p>اكتمل تمرين اليوم ${num(d+1)}. نلتقي غدًا في محطة جديدة على الطريق.</p>`,[['تم',()=>{}]]);}}
+ function celebrate(d){dayView=d;const done=PR.isDayDone(store.program(),d);go(done?'home':'day');if(done&&!celebrated.has(d)){celebrated.add(d);showModal('أحسنت!',`<p class="cheer">${icon('star')}</p><p>اكتمل تمرين ${dayTitle(store.program(),d)}. نلتقي غدًا في محطة جديدة على الطريق.</p>`,[['تم',()=>{}]]);
+  const praise=`assets/audio/${GB.PRAISE.audio}.mp3`;if(window.FollowMedia?.includes(praise)){audio=new Audio(praise);audio.play().catch(()=>{});}}}
  function endSession(){const s=store.draft();if(!s)return;showModal('إنهاء الجلسة','<p>تُحفظ الاستجابات الحالية. الفرز غير المكتمل لا يغيّر المهارات المحددة للتجاوز، وتدريب اليوم غير المكتمل لا يُحسب.</p>',[['إنهاء',()=>run(()=>{const id=s.id;store.finish();reportId=id;go('report');})],['متابعة',()=>go('task')]]);}
  function play(item){stop();const s=store.draft();if(!s)return;
   // Every extra delivery after the first one is assistance, including recorded playback.
@@ -183,7 +198,7 @@
  const ageText=m=>m===null?'—':`${num(Math.floor(m/12))} س ${m%12?`و${num(m%12)} ش`:''}`.trim();
  const pct=x=>x===null||x===undefined?'—':num(Math.round(100*x))+'٪';
  const mean=list=>{const v=list.filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
- function compareRows(){return store.data.children.filter(c=>!M.isAdmin(c)).map(c=>{const sum=M.summary(c,B),program={done:{...c.program?.done},unlocked:{...c.program?.unlocked}};return {c,...sum,band:bandOf(sum.age),days:PR.daysDone(program)};});}
+ function compareRows(){return store.data.children.filter(c=>!M.isAdmin(c)).map(c=>{const sum=M.summary(c,B),program={done:{...c.program?.done},unlocked:{...c.program?.unlocked},rounds:c.program?.rounds};return {c,...sum,band:bandOf(sum.age),days:PR.daysDone(program)};});}
  function compare(){
   const all=compareRows(),bands=[...new Set(all.map(r=>r.band))].sort((a,b)=>a==='none'?1:b==='none'?-1:a-b);
   if(compareView.band!=='all'&&!bands.includes(compareView.band))compareView.band='all';
@@ -220,27 +235,27 @@
  // ---------- Report ----------
  const OUT=[['independent','مستقل','#79a68c'],['help','بمساعدة','#d6b063'],['incorrect','غير صحيح','#cd8b82'],['skip','لم يُقيّم','#a1b3c2']];
  // One row per skill: the latest completed screen, recent practice, and play.
- function skillProfile(c){const screen=c.sessions.filter(s=>s.mode==='screen'&&s.complete).at(-1),passes=store.passes(),games=c.games||[];
+ function skillProfile(c){const screen=c.sessions.filter(s=>s.mode==='screen'&&s.complete).at(-1),passes=store.passes(),mastered=store.mastered(c),games=c.games||[];
   return B.groups.map(g=>{const ids=new Set(g.items.map(i=>i.id)),screenResults=screen?g.items.filter(i=>i.phase==='screen').map(i=>screen.results.find(r=>r.item===i.id)?.outcome||'skip'):[];
    const recent=c.sessions.filter(s=>s.mode==='practice').flatMap(s=>s.results.filter(r=>ids.has(r.item)&&r.outcome!=='skip').map(r=>({...r,session:s.id}))).slice(-10);
    const sessions=[...new Set(c.sessions.filter(s=>s.mode==='practice'&&s.results.some(r=>ids.has(r.item)&&r.outcome!=='skip')).map(s=>s.id))].slice(-6).map(id=>{const rs=c.sessions.find(s=>s.id===id).results.filter(r=>ids.has(r.item)&&r.outcome!=='skip');return Math.round(100*rs.filter(r=>r.outcome==='independent').length/rs.length);});
    const independent=recent.filter(r=>r.outcome==='independent').length,plays=games.filter(x=>x.group===g.id);
-   const status=passes.has(g.id)?['checked','تم التحقق']:recent.length?['practising','قيد التدريب']:screen?['next','للتدريب']:['new','لم يبدأ'];
+   const support={pictures:'مساعدة مصوّرة فورية',delay:'مساعدة بعد انتظار',none:'دون مساعدة مصوّرة'}[store.support(g.id,c)],status=mastered.has(g.id)?['checked','متقَنة']:passes.has(g.id)?['checked','تم التحقق']:recent.length?['practising',`قيد التدريب · ${support}`]:screen?['next','للتدريب']:['new','لم يبدأ'];
    return {g,screenResults,recent,independent,sessions,plays,status};});}
  function report(){const c=store.active(),sessions=c.sessions.filter(s=>s.results.length||s.ended),s=sessions.find(s=>s.id===reportId)||sessions.at(-1),program=store.program(),games=c.games||[];
   app.innerHTML=`<div class="section-heading"><h1>التقرير</h1><div class="no-print" id="report-tools"></div></div><p class="report-name">${esc(c.name)} · ${shortDate(Date.now())}</p>`;
   if(!s&&!games.length){app.insertAdjacentHTML('beforeend','<div class="card empty">لا توجد استجابات مسجلة بعد.</div>');return;}
   $('#report-tools').append(button('print','طباعة التقرير أو حفظ PDF',()=>window.print()));
   const practiced=c.sessions.filter(x=>x.mode==='practice').flatMap(x=>x.results).filter(r=>r.outcome!=='skip'),indep=practiced.filter(r=>r.outcome==='independent').length;
-  app.insertAdjacentHTML('beforeend',`<section class="card overview"><h2>نظرة عامة</h2><div class="tiles"><span>${icon('road')}<b>${num(PR.daysDone(program))}/${num(PR.DAYS.length)}</b>أيام الطريق</span><span>${icon('ear')}<b>${num(practiced.length)}</b>تعليمات في التدريب</span><span>${icon('check')}<b>${practiced.length?num(Math.round(100*indep/practiced.length))+'٪':'—'}</b>استجابة مستقلة في التدريب</span><span>${icon('game')}<b>${num(games.length)}</b>ألعاب مكتملة</span></div><p class="muted">الألعاب للعب والتعزيز فقط ولا تدخل في نسب الفرز أو التدريب.</p></section>`);
+  app.insertAdjacentHTML('beforeend',`<section class="card overview"><h2>نظرة عامة</h2><div class="tiles"><span>${icon('road')}<b>${(()=>{const r=PR.roundCount(program),[f,e]=PR.roundRange(program,r);let n=0;for(let d=f;d<e;d++)if(PR.isDayDone(program,d))n++;return `${num(n)}/${num(e-f)}`;})()}</b>أيام الطريق${PR.roundCount(program)>1?` · الجولة ${num(PR.roundCount(program))}`:''}</span><span>${icon('star')}<b>${num(store.mastered().size)}/${num(B.groups.length)}</b>مهارات متقنة</span><span>${icon('ear')}<b>${num(practiced.length)}</b>تعليمات في التدريب</span><span>${icon('check')}<b>${practiced.length?num(Math.round(100*indep/practiced.length))+'٪':'—'}</b>استجابة مستقلة في التدريب</span><span>${icon('game')}<b>${num(games.length)}</b>ألعاب مكتملة</span></div><p class="muted">الألعاب للعب والتعزيز فقط ولا تدخل في نسب الفرز أو التدريب.</p></section>`);
   const rows=skillProfile(c),dot=o=>`<i class="dot-${o}" title="${OUT.find(x=>x[0]===o)[1]}"></i>`;
   app.insertAdjacentHTML('beforeend',`<section class="card profile"><h2>ملف المهارات</h2><div class="legend">${OUT.map(([,t,color])=>`<span><i style="--color:${color}"></i>${t}</span>`).join('')}</div><div class="profile-table" role="table" aria-label="ملف المهارات"><div class="profile-row head" role="row"><span role="columnheader">المهارة</span><span role="columnheader">آخر فرز</span><span role="columnheader">آخر ١٠ في التدريب</span><span role="columnheader">الجلسات</span><span role="columnheader">الحالة</span></div>${rows.map(r=>`<div class="profile-row" role="row"><span role="cell"><b>${esc(r.g.label)}</b>${r.plays.length?`<small>${icon('game')} ${num(r.plays.length)}</small>`:''}</span><span role="cell" class="dots" aria-label="${r.screenResults.length?r.screenResults.map(o=>OUT.find(x=>x[0]===o)[1]).join('، '):'لا يوجد فرز مكتمل'}">${r.screenResults.length?r.screenResults.map(dot).join(''):'<small>—</small>'}</span><span role="cell">${r.recent.length?`<span class="meter" aria-hidden="true"><i style="width:${100*r.independent/r.recent.length}%"></i></span><small>${num(r.independent)} مستقل من ${num(r.recent.length)}</small>`:'<small>—</small>'}</span><span role="cell" class="spark" aria-label="نسبة الاستجابة المستقلة في آخر الجلسات: ${r.sessions.map(v=>v+'٪').join('، ')||'لا يوجد'}">${r.sessions.map(v=>`<i style="height:${Math.max(8,v)}%"></i>`).join('')||'<small>—</small>'}</span><span role="cell"><em class="status ${r.status[0]}">${r.status[1]}</em></span></div>`).join('')}</div></section>`);
   if(s)sessionReport(c,sessions,s);
-  const latestScreen=c.sessions.filter(x=>x.mode==='screen'&&x.complete).at(-1),passes=store.passes(),focus=PR.ORDER.find(id=>!passes.has(id));
+  const latestScreen=c.sessions.filter(x=>x.mode==='screen'&&x.complete).at(-1),passes=store.passes(),focus=PR.ORDER.find(id=>!passes.has(id)&&!store.mastered().has(id));
   app.insertAdjacentHTML('beforeend',`<section class="card"><h2>خطة التدريب</h2><p>${latestScreen?`آخر فرز مكتمل: ${date(latestScreen.finished)}`:'لم يكتمل فرز بعد.'}</p><p>${passes.size?'محدّد للتجاوز: '+B.groups.filter(g=>passes.has(g.id)).map(g=>esc(g.label)).join('، '):'لا توجد مهارات محددة للتجاوز.'}</p><p>للتدريب أو إعادة التحقق: ${B.groups.filter(g=>!passes.has(g.id)).map(g=>esc(g.label)).join('، ')||'يمكن إعادة تدريب أي مهارة عند الحاجة.'}</p>${focus?`<p>اقتراح للبيت: العبوا لعبة «${esc(GB.byGroup(focus).title)}» وتدرّبوا على «${esc(label(focus))}» بأشياء حقيقية من البيت.</p>`:''}</section>`);
  }
  function sessionReport(c,sessions,s){reportId=s.id;
-  const wrap=document.createElement('div');wrap.className='session-pick no-print';wrap.innerHTML='<label for="session-choice">الجلسة</label>';const chooser=document.createElement('select');chooser.id='session-choice';for(const entry of [...sessions].reverse()){const o=document.createElement('option');o.value=entry.id;o.textContent=`${entry.mode==='screen'?'فرز':Number.isInteger(entry.day)?'اليوم '+num(entry.day+1):'تدريب'} · ${date(entry.started)}${entry.complete?'':' · غير مكتمل'}`;o.selected=entry.id===s.id;chooser.append(o);}chooser.onchange=()=>{reportId=chooser.value;report();};wrap.append(chooser);app.append(wrap);window.StyledDropdowns?.enhance(wrap);
+  const wrap=document.createElement('div');wrap.className='session-pick no-print';wrap.innerHTML='<label for="session-choice">الجلسة</label>';const chooser=document.createElement('select');chooser.id='session-choice';for(const entry of [...sessions].reverse()){const o=document.createElement('option');o.value=entry.id;o.textContent=`${entry.mode==='screen'?'فرز':Number.isInteger(entry.day)?dayTitle(store.program(),entry.day):'تدريب'} · ${date(entry.started)}${entry.complete?'':' · غير مكتمل'}`;o.selected=entry.id===s.id;chooser.append(o);}chooser.onchange=()=>{reportId=chooser.value;report();};wrap.append(chooser);app.append(wrap);window.StyledDropdowns?.enhance(wrap);
   const counts=M.counts(s.results),n=counts.independent+counts.help+counts.incorrect,remaining=s.items.length-s.results.length;
   app.insertAdjacentHTML('beforeend',`<section class="card"><h2>${s.mode==='screen'?'الفرز':'التدريب'}${s.group?' · '+esc(label(s.group)):''}</h2><p class="muted">${date(s.started)} · ${s.complete?'مكتمل':s.ended?'أُنهي مبكرًا':'قيد المتابعة'}</p><div class="report-summary"><span><b>${counts.independent}</b>مستقل</span><span><b>${counts.help}</b>بمساعدة</span><span><b>${counts.incorrect}</b>غير صحيح</span><span><b>${counts.skip+remaining}</b>لم يُقيّم</span></div><p class="muted" style="margin:14px 0 0">${counts.independent} مستقل من ${n} مُقيّم · ${remaining} دون استجابة مسجلة</p></section>`);
   const sessionGroups=B.groups.filter(g=>s.items.some(id=>g.items.some(i=>i.id===id))),chartMax=Math.max(1,...sessionGroups.map(g=>s.items.filter(id=>g.items.some(i=>i.id===id)).length)),ticks=chartMax<=6?Array.from({length:chartMax+1},(_,i)=>i):Array.from({length:5},(_,i)=>Math.round(chartMax*i/4));
@@ -250,8 +265,8 @@
 
  // ---------- Parent guide ----------
  function guide(){const legend=[['home','الرئيسية: لوحة الطفل وتمرين اليوم'],['user','حساب الطفل: اختيار طفل أو إضافة طفل (بسؤال حسابي للأهل)'],['table','جدول المقارنة: الأطفال حسب العمر والجنس (من نافذة الحسابات)'],['key','وضع المعالج: برمز المعالج تُفتح كل الأيام والخطوات؛ اضغطوه مرة أخرى للإيقاف'],['chart','التقرير: التقدم وطباعته PDF'],['info','هذا الدليل'],['download','تنزيل التطبيق ليعمل دون إنترنت'],['road','الطريق: محطة لكل يوم'],['game','الألعاب: لعبة لكل مهارة'],['ear','التدريب: تعليمات قصيرة لمهارة واحدة'],['screen','الفرز: ٣٣ مهمة يقرؤها الأخصائي مرة واحدة'],['play','تشغيل التعليمات المسجّلة'],['repeat','تكرار أو إعادة المحاولة: تُسجَّل مساعدة'],['picture','بطاقات مصوّرة لخطوات التعليمات: تُسجَّل مساعدة'],['book','ما تحتاجه من ألعاب وأشياء للمهمة'],['flag','إنهاء الجلسة وحفظها'],['check','استجابة مستقلة'],['help','استجابة مع مساعدة'],['cross','استجابة غير صحيحة'],['skip','لم يُقيّم / الجولة التالية'],['star','نجمة: جولة أو يوم مكتمل'],['lock','يوم مقفل: يُفتح يوم جديد كل يوم']];
-  showModal('دليل الأهل',`<div class="guide"><h3>كيف نستخدم التطبيق؟</h3><ol><li>اختاروا حساب الطفل أو أضيفوا اسمه.</li><li>من الرئيسية اضغطوا «ابدأ تمرين اليوم»: لعبة قصيرة، ثم خمس تعليمات، ثم لعبة اليوم. يكفي ٥–١٠ دقائق.</li><li>اقرؤوا التعليمات للطفل مرة واحدة بصوت هادئ، وانتظروا قليلًا قبل المساعدة.</li><li>بعد كل تعليمة سجّلوا ما حدث: مستقل، أو بمساعدة، أو غير صحيح.</li><li>يُفتح يوم جديد على الطريق كل يوم. الألعاب متاحة دائمًا للعب الحر.</li><li>الشريط السفلي ينقلكم بين الرئيسية والطريق والألعاب والتدريب والفرز والتقرير.</li></ol>
-  <h3>نصائح</h3><ul><li>حضّروا الأشياء الحقيقية (كرة، كوب، صندوق…) قبل البدء؛ أيقونة الكتاب تذكر ما تحتاجونه.</li><li>إن احتاج الطفل مساعدة فاعرضوا البطاقات المصوّرة أو كرّروا التعليمات، فهذا جزء من التعلّم ويُسجَّل مساعدة.</li><li>امدحوا المحاولة، وتوقّفوا عندما يتعب الطفل؛ التقدم محفوظ.</li><li>التطبيق ليس اختبارًا مقننًا ولا يعطي تشخيصًا. الفرز يقوم به الأخصائي.</li></ul>
+  showModal('دليل الأهل',`<div class="guide"><h3>كيف نستخدم التطبيق؟</h3><ol><li>اختاروا حساب الطفل أو أضيفوا اسمه.</li><li>من الرئيسية اضغطوا «ابدأ تمرين اليوم»: لعبة قصيرة، ثم خمس تعليمات، ثم لعبة اليوم. يكفي ٥–١٠ دقائق.</li><li>اقرؤوا التعليمات للطفل مرة واحدة بصوت هادئ، وانتظروا قليلًا قبل المساعدة.</li><li>بعد كل تعليمة سجّلوا ما حدث: مستقل، أو بمساعدة، أو غير صحيح.</li><li>يُفتح يوم جديد على الطريق كل يوم. بعد آخر يوم تبدأ جولة جديدة تكرّر المهارات التي لم يتقنها الطفل بعد، يومين لكل مهارة، حتى يتقنها كلها. الألعاب متاحة دائمًا للعب الحر.</li><li>تُعدّ المهارة متقَنة عندما ينفّذ الطفل ٨ من آخر ١٠ تعليمات فيها وحده، في يومين مختلفين على الأقل.</li><li>الشريط السفلي ينقلكم بين الرئيسية والطريق والألعاب والتدريب والفرز والتقرير.</li></ol>
+  <h3>نصائح</h3><ul><li>حضّروا الأشياء الحقيقية (كرة، كوب، صندوق…) قبل البدء؛ أيقونة الكتاب تذكر ما تحتاجونه.</li><li>يضبط التطبيق المساعدة في التدريب وحده: تظهر البطاقات المصوّرة (أو يُشار إلى الصورة الصحيحة) فورًا عندما يحتاج الطفل دعمًا كثيرًا، ثم بعد خمس ثوانٍ عندما ينجح بالمساعدة، ثم لا تظهر إلا بطلبكم عندما ينجح وحده. انتظروا الثواني الخمس قبل أن تساعدوا. كل مساعدة جزء من التعلّم وتُسجَّل مساعدة.</li><li>التعليمات التي أخطأ فيها الطفل أو احتاج فيها مساعدة تعود في التمرين التالي للتكرار.</li><li>امدحوا المحاولة، وتوقّفوا عندما يتعب الطفل؛ التقدم محفوظ.</li><li>التطبيق ليس اختبارًا مقننًا ولا يعطي تشخيصًا. الفرز يقوم به الأخصائي.</li></ul>
   <h3>معاني الأيقونات</h3><dl class="legend-list">${legend.map(([i,t])=>`<div><dt>${icon(i)}</dt><dd>${esc(t)}</dd></div>`).join('')}</dl>
   <h3>للأخصائي</h3><p>في الفرز: اقرأ مرة واحدة دون نموذج أو تلميح أو بطاقات. سجّل التكرار أو المساعدة قبل تقييم الاستجابة. ثلاث استجابات مستقلة في الفرز المكتمل تضع علامة على المهارة؛ يمكن إعادة تدريبها. الحسابات محفوظة في هذا المتصفح على هذا الجهاز فقط. من نافذة الحسابات افتحوا «جدول المقارنة» لمقارنة الأطفال حسب العمر والجنس.</p></div>`);}
 

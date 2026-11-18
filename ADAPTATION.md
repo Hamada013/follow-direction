@@ -25,6 +25,12 @@ The source targets adults. This app is not a standardized preschool assessment, 
 - Save after each action, cue, answer and score. Closing/reloading preserves the current child's unfinished session. Home > Follow/متابعة resumes it. Only one unfinished session per child; ending early saves a partial report. Practice and screening are separate dated sessions, never combined into a mastery score.
 - Reports show counts with explicit assessed and unassessed denominators, grouped horizontal bars and the practice plan. Browser printing offers PDF. The Accounts comparison table sets children side by side by age group and gender, using independent / assessed rates for the latest completed screen and for practice. Screening and practice remain separate; skipped and pending items are not incorrect responses.
 
+## Repetition, support and mastery
+
+- The road continues in rounds until every skill is mastered: 8 of the last 10 practice directions independent, on at least two days. Mastery is a practice criterion for the home programme, not a norm or discharge decision.
+- Practice support follows most-to-least prompting with a constant time delay: immediate picture cue while the child mostly errs, a 5-second delay once the child succeeds with help, no automatic cue once the child succeeds alone. Every automatic cue is recorded as help, so the independent rate stays an honest measure. Screening is unaffected.
+- Missed and helped directions return in the next practice set.
+
 ## Accounts and privacy
 
 VOC-style local accounts: stable outlined fruit/animal avatars, Arabic search and sorting, protected hidden Hamada account, parent calculation gate, admin-only deletion and confirmation. Type `Hamada` to sign in to the admin account. This app has independent stores, `follow-direction-children-v1` and `follow-direction-account-avatars-v1`; it reads no VOC progress and uses no Google, Drive, Sheets, Firebase or analytics service.

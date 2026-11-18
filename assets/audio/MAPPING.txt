@@ -1,5 +1,5 @@
 OPTIONAL ARABIC RECORDINGS — UTF-8
-Read exactly the prompt, once, naturally. No verbal labels for choices or hints. Existing numbers 001–066 are retained. Direction prompts are 001–253; mini-game prompts start at 301.
+Read exactly the prompt, once, naturally. No verbal labels for choices or hints. Existing numbers 001–066 are retained. Direction prompts are 001–253; mini-game prompts start at 301; praise is 900.
 
 001.mp3 | one-1 | فرز | حركة واحدة
 المس رأسك.
@@ -1097,3 +1097,8 @@ MINI-GAME PROMPTS — 301 onwards. Read each once, cheerfully and clearly.
 
 412.mp3 | لعبة: رحلة السيارة | ثلاث خطوات
 سُق السيارة إلى البحيرة، ثم الشجرة، ثم الزهرة.
+
+PRAISE — played on the "أحسنت!" screens at the end of a mini-game and of a day. Warm and short.
+
+900.mp3 | مديح | نهاية اللعبة واليوم
+أحسنت!

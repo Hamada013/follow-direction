@@ -67,6 +67,8 @@
  let audio=301;
  for(const game of games){game.rounds=game.rounds.map(game.make);for(const round of game.rounds)round.audio=String(audio++);}
  for(const game of games){const more=game.more.map(game.make);for(const round of more)round.audio=String(audio++);game.rounds.push(...more);delete game.more;delete game.make;}
- const api={games,OBJ,COLOR,PLACE,PART,ROUNDS_PER_PLAY:10,byGroup:group=>games.find(g=>g.group===group)};
+ // Optional praise spoken on the "أحسنت!" screens (end of a game, end of a day). Kept far from round numbers.
+ const PRAISE={audio:'900',prompt:'أحسنت!'};
+ const api={games,OBJ,COLOR,PLACE,PART,PRAISE,ROUNDS_PER_PLAY:10,byGroup:group=>games.find(g=>g.group===group)};
  if(typeof module!=='undefined')module.exports=api;else root.FollowGameBank=api;
 })(globalThis);

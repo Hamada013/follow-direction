@@ -20,7 +20,7 @@
     if(s.complete&&(!s.ended||s.results.length!==s.items.length))throw Error('جلسة غير مكتملة.');
    }
    if(c.games!==undefined&&(!Array.isArray(c.games)||c.games.length>2000||!c.games.every(g=>g&&bank.groups.some(x=>x.id===g.group)&&Number.isInteger(g.rounds)&&Number.isInteger(g.firstTry)&&g.firstTry>=0&&g.firstTry<=g.rounds)))throw Error('بيانات الألعاب غير صالحة.');
-   if(c.program!==undefined&&(!c.program||typeof c.program.done!=='object'||typeof c.program.unlocked!=='object'))throw Error('بيانات الخطة اليومية غير صالحة.');
+   if(c.program!==undefined&&(!c.program||typeof c.program.done!=='object'||typeof c.program.unlocked!=='object'||c.program.rounds!==undefined&&(!Array.isArray(c.program.rounds)||!c.program.rounds.every(r=>Array.isArray(r)&&r.length&&r.every(g=>bank.groups.some(x=>x.id===g))))))throw Error('بيانات الخطة اليومية غير صالحة.');
   }
   if(d.active!==null&&!ids.has(d.active))throw Error('الحساب النشط غير موجود.');
   return d;
@@ -43,12 +43,19 @@
    const pool=this.bank.items.filter(i=>i.phase===mode&&(!group||i.group===group)).map(i=>i.id);
    const items=options.items?options.items.filter(id=>pool.includes(id)):pool;
    if(!['screen','practice'].includes(mode)||!items.length)throw Error('لا توجد مهام.');
-   this.commit(d=>{const session={id:crypto.randomUUID(),mode,group:group||null,started:new Date().toISOString(),items,results:[],helped:false,selection:[],ended:false,complete:false};if(Number.isInteger(options.day))Object.assign(session,{day:options.day,step:options.step});d.children.find(c=>c.id===d.active).sessions.push(session);});return this.draft();
+   this.commit(d=>{const session={id:crypto.randomUUID(),mode,group:group||null,started:new Date().toISOString(),items,results:[],helped:false,selection:[],ended:false,complete:false};if(Number.isInteger(options.day))Object.assign(session,{day:options.day,step:options.step});if(mode==='practice'&&SUPPORT.includes(options.support))session.support=options.support;d.children.find(c=>c.id===d.active).sessions.push(session);});return this.draft();
   }
-  // Least-practised items first, so short daily sets move through the whole skill.
-  nextPractice(group,count){const tally=new Map();for(const s of this.active()?.sessions||[])for(const r of s.results)tally.set(r.item,(tally.get(r.item)||0)+1);
-   return this.bank.items.filter(i=>i.phase==='practice'&&i.group===group).map((i,order)=>({id:i.id,order,n:tally.get(i.id)||0})).sort((a,b)=>a.n-b.n||a.order-b.order).slice(0,count).map(x=>x.id);}
-  program(){const p=this.active()?.program;return {done:{...p?.done},unlocked:{...p?.unlocked}};}
+  // Up to two directions the child last missed or needed help with come back first (repetition),
+  // then the least-practised ones, so short daily sets still move through the whole skill.
+  nextPractice(group,count){const tally=new Map(),last=new Map();
+   for(const s of this.active()?.sessions||[])for(const r of s.results){if(r.outcome==='skip')continue;tally.set(r.item,(tally.get(r.item)||0)+1);last.set(r.item,r);}
+   const pool=this.bank.items.filter(i=>i.phase==='practice'&&i.group===group).map((i,order)=>({id:i.id,order,n:tally.get(i.id)||0,last:last.get(i.id)}));
+   const again=pool.filter(x=>x.last&&x.last.outcome!=='independent').sort((a,b)=>String(b.last.at).localeCompare(String(a.last.at))).slice(0,Math.min(2,count-1)).map(x=>x.id);
+   return [...again,...pool.filter(x=>!again.includes(x.id)).sort((a,b)=>a.n-b.n||a.order-b.order).slice(0,count-again.length).map(x=>x.id)];}
+  program(){const p=this.active()?.program;return {done:{...p?.done},unlocked:{...p?.unlocked},...(p?.rounds?{rounds:p.rounds.map(r=>[...r])}:{})};}
+  startRound(groups){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};(c.program.rounds||=[]).push([...groups]);});}
+  mastered(child=this.active()){return mastered(child,this.bank);}
+  support(group,child=this.active()){return support(child,this.bank,group);}
   markStep(day,step){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};c.program.done[day+':'+step]||=new Date().toISOString();});}
   unlockDay(day,open=true){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};if(open)c.program.unlocked[day]=true;else delete c.program.unlocked[day];});}
   recordGame(group,rounds,firstTry){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.games||=[];c.games.push({group,at:new Date().toISOString(),rounds,firstTry});if(c.games.length>2000)c.games.splice(0,c.games.length-2000);});}
@@ -60,11 +67,13 @@
    this.change(s=>{s.selection.push(key);});return this.draft().selection.length===item.answer.length?this.draft().selection.every((v,i)=>v===item.answer[i]):null;
   }
   retry(){this.change(s=>{s.helped=true;s.selection=[];});}
+  // Supported trial for a choice: the answer is pointed out on screen, which records help.
+  hint(){this.change(s=>{s.helped=true;s.hinted=true;});}
   score(outcome){if(!['independent','help','incorrect','skip'].includes(outcome))throw Error('نتيجة غير صالحة.');this.change(s=>{
    const item=this.bank.items.find(i=>i.id===s.items[s.results.length]);
    if(item.kind!=='observe'&&outcome==='independent'&&(s.selection.length!==item.answer.length||!s.selection.every((v,i)=>v===item.answer[i])))throw Error('أكمل الاستجابة أولًا.');
    if(outcome==='independent'&&s.helped)outcome='help';
-   s.results.push({item:item.id,outcome,at:new Date().toISOString()});s.helped=false;s.delivered=false;s.pictures=false;s.selection=[];
+   s.results.push({item:item.id,outcome,at:new Date().toISOString()});s.helped=false;s.delivered=false;s.pictures=false;s.hinted=false;s.selection=[];
    if(s.results.length===s.items.length){s.ended=true;s.complete=true;s.finished=new Date().toISOString();}
   });}
   finish(){this.change(s=>{s.ended=true;s.complete=false;s.finished=new Date().toISOString();});}
@@ -77,6 +86,16 @@
  // Skills with all screening directions independent in the latest completed screen.
  function checked(child,bank){const s=child?.sessions.filter(s=>s.mode==='screen'&&s.complete).at(-1);
   return new Set(bank.groups.filter(g=>g.items.filter(i=>i.phase==='screen').every(i=>s?.results.some(r=>r.item===i.id&&r.outcome==='independent'))).map(g=>g.id));}
+ // A skill is mastered when 8 of its last 10 practice directions were independent, on at least two days.
+ const practiceResults=(child,bank,group)=>{const ids=new Set(bank.items.filter(i=>i.group===group).map(i=>i.id));return (child?.sessions||[]).filter(s=>s.mode==='practice').flatMap(s=>s.results).filter(r=>ids.has(r.item)&&r.outcome!=='skip');};
+ function mastered(child,bank){return new Set(bank.groups.filter(g=>{const last=practiceResults(child,bank,g.id).slice(-10);return last.length===10&&last.filter(r=>r.outcome==='independent').length>=8&&new Set(last.map(r=>String(r.at).slice(0,10))).size>=2;}).map(g=>g.id));}
+ // Support fades with success (most-to-least prompting with a time delay), from the last five directions:
+ // 'pictures' shows the picture cards with the direction, 'delay' shows them after a short wait,
+ // 'none' leaves them for the adult to show. A new skill starts at 'delay': a chance alone, then help.
+ const SUPPORT=['pictures','delay','none'];
+ function support(child,bank,group){const last=practiceResults(child,bank,group).slice(-5);if(last.length<3)return 'delay';
+  const alone=last.filter(r=>r.outcome==='independent').length,helped=last.filter(r=>r.outcome==='help').length;
+  return alone>=3?'none':alone+helped>=3?'delay':'pictures';}
  // Age in whole months on a given day, or null without a birth date.
  function ageMonths(birth,on=new Date()){if(!birth)return null;const [y,m,d]=birth.split('-').map(Number);let months=(on.getFullYear()-y)*12+on.getMonth()+1-m;if(on.getDate()<d)months--;return Math.max(0,months);}
  // One child's figures for the comparison table. Rates are independent / assessed (skips excluded).
@@ -87,5 +106,5 @@
   return {age:ageMonths(child.birth,on),gender:child.gender||null,screened:!!screen,checked:checked(child,bank).size,screenRate:screen?rate(screen.results):null,practiceRate:rate(practice),practiced:practice.filter(r=>r.outcome!=='skip').length,games:(child.games||[]).length,last:times.at(-1)||null};
  }
  function counts(results=[]){return results.reduce((a,r)=>{a[r.outcome]++;return a;},{independent:0,help:0,incorrect:0,skip:0});}
- const api={Store,KEY,counts,validate,summary,ageMonths,GENDERS,isAdmin:admin};if(typeof module!=='undefined')module.exports=api;else root.FollowModel=api;
+ const api={Store,KEY,counts,validate,summary,ageMonths,mastered,support,SUPPORT,GENDERS,isAdmin:admin};if(typeof module!=='undefined')module.exports=api;else root.FollowModel=api;
 })(globalThis);
