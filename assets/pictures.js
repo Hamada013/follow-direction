@@ -1,0 +1,117 @@
+((root)=>{
+ 'use strict';
+ // Picture cards for spoken directions: one drawing per step, built from the direction's own words.
+ // Every observed direction in the bank must be drawable; tests/pictures.cjs checks this.
+ const bank=root.FollowBank||(typeof require!=='undefined'?require('./bank.js'):null);
+ const SKIN='#fbe3cc',SHIRT='#cfe6f4',MARK='#f2b84b';
+ const COLORS={حمراء:'#d98b84',زرقاء:'#6fa3cc',صفراء:'#e9c25a',خضراء:'#82b39f'};
+ const strip=s=>String(s).replace(/[ً-ْٰ]/g,'').replace(/[.。]+$/,'').trim();
+ const nest=(drawing,x,y,w)=>`<svg x="${x}" y="${y}" width="${w}" height="${w}" viewBox="0 0 100 100">${drawing}</svg>`;
+ const objects=new Map(Object.entries(bank.objects).map(([key,o])=>['ال'+strip(o.label),key]));
+ const art=(key,color)=>{const d=bank.objects[key].drawing;return color?d.replace(/fill="#[0-9a-f]{3,6}"/i,`fill="${color}"`):d;};
+ const closedBook='<path d="M26 14h46a4 4 0 0 1 4 4v66a4 4 0 0 1-4 4H26Z" fill="#5fae86"/><path d="M26 14h10v74H26Z" fill="#1d3b50" opacity=".15" stroke="none"/><rect x="44" y="28" width="22" height="12" rx="2" fill="#fffdf6"/><path d="M72 22v58" stroke="#fff" stroke-width="3" opacity=".5"/>';
+ // The box splits into the part behind a toy (inside and flaps) and the part in front (its face),
+ // so a toy placed inside peeks out of it. Other objects have nothing behind.
+ const layers=key=>{const d=art(key);if(key!=='box')return ['',d];const parts=d.match(/<[^>]+\/>/g);return [parts.slice(1,3).join(''),parts[0]+parts.slice(3).join('')];};
+
+ // A front-facing child with ears and a nose. `arms` replaces the resting arms (paths are drawn as
+ // skin-coloured limbs), `legs` the standing legs, and `mark` rings the body part over the drawing.
+ const limbs=s=>s.replace(/<path d="([^"]+)"\/>/g,(_,d)=>`<path d="${d}" stroke-width="6"/><path d="${d}" stroke="${SKIN}" stroke-width="3"/>`);
+ const hand=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.8" fill="${SKIN}"/>`;
+ const ring=([x,y])=>`<circle cx="${x}" cy="${y}" r="6.5" fill="${MARK}" fill-opacity=".3" stroke="${MARK}" stroke-width="2.4"/>`;
+ function figure({arms,legs,mark,extra=''}={}){
+  const resting='<path d="M39 42 33 64M61 42l6 22"/>'+hand(33,66)+hand(67,66);
+  return `<path d="M39 40h22l3 30H36Z" fill="${SHIRT}"/>${legs??'<path d="M44 70v25h-5m17-25v25h5"/>'}<circle cx="37.5" cy="23" r="3" fill="${SKIN}"/><circle cx="62.5" cy="23" r="3" fill="${SKIN}"/><circle cx="50" cy="22" r="12" fill="${SKIN}"/><path d="M38.5 19c1-10 22-10 23 0"/><circle cx="45.5" cy="20" r="1.2" fill="currentColor"/><circle cx="54.5" cy="20" r="1.2" fill="currentColor"/><path d="M50 22.5v2.5h1.2" stroke-width="1.6"/><path d="M46 28.5q4 3 8 0"/>${mark?ring(mark):''}${limbs(arms??resting)}${extra}`;
+ }
+ // Each part: where it is, the arm that reaches it (shoulder, elbow, hand), and a pose for the legs.
+ const POSE={
+  رأسك:{at:[50,10],arm:'M61 42 73 28 57 11',hand:[57,11]},
+  شعرك:{at:[43,12],arm:'M39 42 27 28 41 12',hand:[41,12]},
+  أنفك:{at:[50,24],arm:'M61 42 70 36 53 25',hand:[53.5,25.5]},
+  أذنك:{at:[62.5,23],arm:'M61 42 72 36 65.5 24',hand:[66,24]},
+  خدك:{at:[56,26],arm:'M61 42 71 37 59 27',hand:[59.5,27.5]},
+  ذقنك:{at:[50,33.5],arm:'M61 42 66 44 52 35',hand:[52.5,35.5]},
+  كتفك:{at:[60,42],arm:'M39 42 46 54 57 44',hand:[57.5,44.5]},
+  بطنك:{at:[50,57],arm:'M61 42 66 54 54 57',hand:[54,57.5]},
+  ركبتك:{at:[64,76],arm:'M61 42 71 57 67 72',hand:[67,72.5],legs:'<path d="M44 70v25h-5m12-25 8 6-4 13h5" stroke-width="3"/>'},
+  قدمك:{at:[79,86],arm:'M61 42 73 60 77 82',hand:[77,83],legs:'<path d="M44 70v25h-5m12-25 13 12 10 3"/>'}
+ };
+ const PARTS=Object.fromEntries(Object.entries(POSE).map(([k,v])=>[k,v.at]));
+ const touch=part=>{const p=POSE[part];return figure({mark:p.at,legs:p.legs,arms:`<path d="M39 42 33 64"/>${hand(33,66)}<path d="${p.arm}"/>${hand(...p.hand)}`});};
+ const handOpen=`<g stroke-width="9"><path d="M41 52 37 27M48 50l-1-27M55 50l1-27M61 53l4-24M37 64 25 53"/></g><g stroke="${SKIN}" stroke-width="5"><path d="M41 52 37 27M48 50l-1-27M55 50l1-27M61 53l4-24M37 64 25 53"/></g><rect x="35" y="44" width="30" height="38" rx="12" fill="${SKIN}"/><path d="M42 50l-1 4M48 49v5M55 49v5"  stroke="${SKIN}" stroke-width="5"/>`;
+ const fist=`<rect x="31" y="38" width="38" height="36" rx="13" fill="${SKIN}"/><path d="M41 38v11M50 38v11M59 38v11M31 58h15c4 0 4 6 0 6h-7"/>`;
+ const BODY={
+  clap:figure({arms:'<path d="M39 42 42 55 47 50M61 42 58 55 53 50"/>'+hand(47.5,49.5)+hand(52.5,49.5),extra:`<path d="m43 45-4-4m18 4 4-4M50 43v-5" stroke="${MARK}"/>`}),
+  wave:figure({arms:'<path d="M39 42 31 66M61 42 72 32 74 18"/><circle cx="74" cy="15" r="3.4" fill="'+SKIN+'"/>',extra:`<path d="M80 10q4 5 0 10m4-13q6 8 0 16" stroke="${MARK}"/>`}),
+  raise:figure({arms:'<path d="M39 42 30 26 28 10M61 42l9-16 2-16"/>',extra:`<path d="M18 30V16m-4 4 4-4 4 4M82 30V16m-4 4 4-4 4 4" stroke="${MARK}"/>`}),
+  raiseOne:figure({arms:'<path d="M39 42 31 66M61 42l9-16 2-16"/><circle cx="72" cy="8" r="3.4" fill="'+SKIN+'"/>',extra:`<path d="M84 30V16m-4 4 4-4 4 4" stroke="${MARK}"/>`}),
+  lower:figure({arms:'<path d="M39 42 36 70M61 42l3 28"/>',extra:`<path d="M24 52v14m-4-4 4 4 4-4M76 52v14m-4-4 4 4 4-4" stroke="${MARK}"/>`}),
+  mouth:figure({mark:[50,29],extra:'<ellipse cx="50" cy="29" rx="3" ry="2.6" fill="#fff"/>'}),
+  smile:figure({extra:`<path d="M43.5 26.5q6.5 7 13 0" stroke-width="3"/><path d="M36 30q-3 2-2 5m30-5q3 2 2 5" stroke="${MARK}"/>`}),
+  self:figure({mark:[50,50],arms:'<path d="M39 42 31 66M61 42l7 12-15-4"/>'}),
+  table:figure({arms:'<path d="M39 42 37 60M61 42l2 18"/>',extra:'<path d="M18 61h64M24 61v34m52-34v34" stroke-width="4"/>'}),
+  open:handOpen,
+  close:fist
+ };
+ const ACTIONS={'صفق':'clap','صفق بيديك':'clap','لوح':'wave','لوح بيدك':'wave','ارفع يديك':'raise','ارفعها':'raiseOne','أنزل يديك':'lower','أنزلهما':'lower','افتح فمك':'mouth','ابتسم':'smile','أشر إلى نفسك':'self','ضع يديك على الطاولة':'table','افتح يدك':'open','أغلق يدك':'close','أغلقها':'close'};
+ const PREPS={داخل:'in',في:'in',فوق:'on',تحت:'under',بجانب:'beside',أمام:'front',خلف:'behind',خارج:'out'};
+ const arrow=d=>`<path d="${d}" stroke="${MARK}" stroke-width="3.5"/>`;
+ // X placed relative to Y; `moving` adds the arrow that shows the action.
+ function scene(x,prep,y,moving=true,colorX){
+  const X=art(x,colorX),Y=art(y);
+  switch(prep){
+   case 'in':{const [back,front]=layers(y);return nest(back,22,34,56)+nest(X,36,40,28)+nest(front,22,34,56)+(moving?arrow('M50 4v20m-6-6 6 6 6-6'):'');}
+   case 'on':return nest(Y,22,40,56)+nest(X,34,28,32)+(moving?arrow('M16 10v20m-5-5 5 5 5-5'):'');
+   case 'under':return nest(X,37,46,26)+nest(Y,16,6,68)+(moving?arrow('M14 60v24m-5-5 5 5 5-5'):'');
+   case 'beside':return nest(Y,42,26,54)+nest(X,6,50,32);
+   case 'front':return nest(Y,26,12,52)+nest(X,32,48,40);
+   case 'behind':return nest(X,44,6,30)+`<rect x="26" y="30" width="52" height="52" rx="6" fill="#fff" stroke="none"/>`+nest(Y,24,28,56);
+   case 'out':return nest(Y,44,32,52)+nest(X,4,54,30)+(moving?arrow('M48 44 30 54m2-8-2 8 8 1'):'');
+  }
+  throw Error('Unknown position '+prep);
+ }
+ const between=(x,a,b)=>nest(art(a),2,44,30)+nest(art(b),68,44,30)+`<circle cx="50" cy="58" r="17" fill="${MARK}" stroke="none" opacity=".35"/>`+nest(art(x),36,42,28);
+ const give=x=>nest(art(x),2,22,44)+arrow('M48 50h14m-5-5 5 5-5 5')+nest(handOpen,60,24,40);
+ const count=(x,n)=>Array.from({length:n},(_,i)=>nest(art(x),(100-n*32)/2+i*32,30,32)).join('');
+ const noun=word=>{const key=objects.get(word);if(!key)throw Error('Unknown object '+word);return key;};
+ const WORDS='(ال[^\\s،]+(?: الأسنان)?)';
+
+ // One action: a body movement, giving a toy, or placing a toy. `ctx` remembers "it".
+ function action(text,ctx){
+  if(ACTIONS[text])return BODY[ACTIONS[text]];
+  let m=text.match(/^المس (\S+)$/);if(m&&POSE[m[1]])return touch(m[1]);
+  m=text.match(new RegExp('^أعطني '+WORDS+'$'));if(m){const x=noun(m[1]);ctx.it=x;return give(x);}
+  m=text.match(new RegExp('^ضع '+WORDS+' بين '+WORDS+' و'+WORDS+'$'));if(m)return between(noun(m[1]),noun(m[2]),noun(m[3]));
+  m=text.match(new RegExp('^ضع(ها|ه)?(?: '+WORDS+')? (\\S+) '+WORDS+'$'));
+  if(m&&PREPS[m[3]]){const x=m[2]?noun(m[2]):ctx.it;if(!x)throw Error('No object for '+text);ctx.it=x;return scene(x,PREPS[m[3]],noun(m[4]));}
+  throw Error('Unknown action '+text);
+ }
+ // A condition the child can see: a colour, a position, a number, or an open/closed book.
+ function condition(text,ctx){
+  let m=text.match(new RegExp('^كانت? '+WORDS+' (حمراء|زرقاء|صفراء|خضراء)$'));if(m){const x=noun(m[1]);Object.assign(ctx,{it:x,ref:null});return nest(art(x,COLORS[m[2]]),18,18,64);}
+  m=text.match(/^كانت? (حمراء|زرقاء|صفراء|خضراء)$/);if(m&&ctx.it)return nest(art(ctx.it,COLORS[m[1]]),18,18,64);
+  m=text.match(new RegExp('^كانت? '+WORDS+' (\\S+) '+WORDS+'$'));if(m&&PREPS[m[2]]){const x=noun(m[1]),y=noun(m[3]);Object.assign(ctx,{it:x,ref:y});return scene(x,PREPS[m[2]],y,false);}
+  m=text.match(/^كانت? (تحته|خارجه|فوقه|داخله)$/);if(m&&ctx.it&&ctx.ref)return scene(ctx.it,PREPS[m[1].slice(0,-1)],ctx.ref,false);
+  m=text.match(/^كانت? هناك (\S+)(?: واحدة)?$/);
+  if(m){const word=m[1];if(word==='كوبان'){ctx.it='cup';return count('cup',2);}const x=noun('ال'+word);ctx.it=x;return count(x,1);}
+  m=text.match(/^كان(?: الكتاب)? (مفتوحا|مغلقا)$/);if(m&&(text.includes('الكتاب')||ctx.it==='book')){ctx.it='book';return m[1]==='مفتوحا'?nest(art('book'),14,14,72):nest(closedBook,14,14,72);}
+  throw Error('Unknown condition '+text);
+ }
+ const svg=body=>`<svg class="picture" viewBox="0 0 100 100" aria-hidden="true">${body}</svg>`;
+ // Returns either ordered steps or "if … then …" branches, each with its own words.
+ function describe(prompt){
+  const text=String(prompt).trim(),ctx={};
+  if(strip(text).startsWith('إذا')){
+   const branches=text.split(/\.\s*/).filter(Boolean).map(clause=>{
+    const m=clause.trim().match(/^(و?إذا [^،]+)،\s*(.+)$/);if(!m)throw Error('Unknown condition '+clause);
+    const when=strip(m[1]).replace(/^و?إذا /,'');
+    return {when:{svg:svg(condition(when,ctx)),text:m[1].trim()},then:{svg:svg(action(strip(m[2]),ctx)),text:m[2].trim()}};
+   });
+   return {type:'condition',branches};
+  }
+  const parts=text.replace(/[.]+$/,'').split(/،\s*ثم\s*/);
+  return {type:'steps',steps:parts.map(part=>({svg:svg(action(strip(part),ctx)),text:part.trim()}))};
+ }
+ const api={describe,art,layers,strip,svg,nest,COLORS,BODY,PARTS};
+ if(typeof module!=='undefined')module.exports=api;else root.FollowPictures=api;
+})(globalThis);

@@ -12,6 +12,7 @@ node tests/one-way-links.cjs
 npm install            # only for the browser checks
 node tests/browser.cjs
 node tests/updates.cjs
+node tests/games-browser.cjs   # APP_ENGINE=webkit, APP_VIEWPORT=390x844 for phone
 ```
 
 Pushing to `main` publishes the site through GitHub Actions (Settings → Pages → Source: GitHub Actions). The app stands alone: other sites link here, and it never links back to them.
@@ -24,10 +25,33 @@ To replace the logo, save the supplied artwork as `assets/logo.webp` (convert fo
 
 WebKit offline verification makes the test server unreachable while keeping service-worker execution enabled; Playwright’s WebKit offline-emulation toggle itself produces an internal navigation error in this runtime. Chromium also passes with browser offline mode enabled.
 
-## Research workbook
+## What the child and family see
 
-Inside Accounts, the spreadsheet icon downloads `follow-direction-research-YYYY-MM-DD.xlsx`. Each export automatically collects all saved child profiles and sessions in the current browser. It creates a fresh cumulative snapshot, not an appended duplicate. The workbook contains Dashboard, Cases, Sessions, Skills, Records, and Dictionary; grouped screening/practice charts and a monthly independent-response trend are native editable Excel charts. The report page retains its PDF/print control. JSON backup/restore stays separate in Accounts.
+- **Start-up:** the logo animates and greets the child (about two seconds; tap to skip; shorter with reduced motion). Automatic update reloads skip it.
+- **Screens fit the window:** the page never scrolls. A bottom bar moves between home, road, games, practice, screening (or continue session), report and therapist mode; it is hidden during a game or a direction, which have their own exit. Game pieces scale to the space left (container query units), the road lays its 12 stations out in rows that fit, and short landscape phones show directions in two columns. Only the report and the comparison table scroll, inside their own area.
+- **Therapist mode:** the key icon in the bottom bar asks for the therapist code (013). It opens every road day and every step on this device until it is turned off with the same button.
+- **Dashboard:** greeting and today's workout.
+- **Daily plan and road (`assets/program.js`):** round 1 is 12 days, one skill per day from easiest to hardest (one step, objects, colour and size, quantity, use of objects, position, two steps, order, two steps in play, if…, three steps), then a review day. Each day is a warm-up game from yesterday's skill, five practice directions (least-practised first) and the day's game, about 5–10 minutes. Like Fluency Flow, one new day opens per calendar date; behind the parent gate, «فتح اليوم (للأهل)» opens a locked day and «إقفال هذا اليوم مرة أخرى» undoes it until it is started. A practice step counts only when all five directions are scored; ending early saves a partial report and leaves the step open.
+- **Rounds until mastery:** when a round ends, the next round repeats only the skills not yet mastered, two days per skill plus a review day of games, until every skill is mastered. A skill is mastered when 8 of its last 10 practice directions were independent, on at least two different days. Day numbers restart in each round; the road shows the current round.
+- **Fading support in practice (`supportStep` in `assets/app.js`, `support` in `assets/model.js`):** from the last five practice directions of the skill, picture cards (or, for choice tasks, the correct picture pulsing) appear at once when the child needs a lot of help, after a 5-second wait once the child succeeds with help (also the start level of a new skill), and only on request once the child succeeds alone. Shown support records help. Screening never shows automatic support.
+- **Repetition:** each practice set starts with up to two directions the child last missed or needed help with, then the least-practised ones.
+- **Mini-games (`assets/game-bank.js`, `assets/games.js`):** one game per skill that practises the idea of the skill, not the screening items. Ten rounds per play (each game has at least ten different rounds), tap or drag; every drag also works as tap-the-toy-then-tap-the-place, for keyboards and motor access. Placement games are a small room: toys on a shelf, the box and chair on the floor. Drop targets are invisible; a toy dropped anywhere on an object lands in the part it is over (inside or on the box, on or under the chair, beside either) and is drawn there, peeking out of the box or behind the chair legs. Games are recorded only as play (rounds and first-try rounds), never in screening or practice percentages or the comparison table.
+- **Picture cards (`assets/pictures.js`):** for spoken directions, the picture icon shows one numbered card per step, and "if" directions show each condition beside its action. Showing them records help for that item, in screening and practice alike, because they are a cue. `tests/pictures.cjs` fails if any direction in the bank cannot be drawn.
+- **Parent guide:** the info icon explains how to use the app, gives tips and lists every icon's meaning.
+- **Report:** overview (road days, practice directions, independent practice rate, games), a skill profile (latest screen as dots, last 10 practice responses, recent sessions, status), the chosen session's detail and chart, and the practice plan with a home suggestion. The session picker is a styled dropdown.
 
-Numeric `case_id` values persist through future exports and backups and are not reused after deletion. `child_uuid` remains the cross-file join key; case numbers are local to the dataset. Child names appear in Cases. Hamada/admin is excluded. Missing demographic or consent data is not inferred. Downloaded workbooks stay on the device; there is no Google/Drive/Sheets connection. Each click includes the latest saved observations, including partial sessions.
+Recordings: directions are `assets/audio/001–253.mp3`; mini-game prompts are `301–412.mp3`; the «أحسنت!» praise is `900.mp3` (rounds added later are numbered after 386, so earlier numbers never change). All are listed in `assets/audio/MAPPING.txt`. Add the files and rebuild; nothing else changes.
 
-The PWA uses the checked-in `assets/workbook-template.js` and needs no library download or local server for export. `scripts/build-workbook-template.mjs` authors that template with Artifact Tool when changing its layout; it requires the bundled `@oai/artifact-tool` runtime or `ARTIFACT_NODE_MODULES`. Normal PWA/publication builds use the existing template. Rebuild the PWA after template changes.
+## Comparison table
+
+Inside Accounts (behind the parent calculation), «جدول المقارنة» opens a table of every child on this device: gender, birth date, age, skills checked in the latest completed screen, independent rate in that screen and in all practice, practice directions, road days and games. Filter by gender and age group, sort by age, rates or name, and print it. Gender and birth date are optional when adding a child and can be edited in the table. A second table averages each age group (whole years) by boys, girls and everyone; each child counts once, and an unrecorded gender appears only under everyone. These are descriptive comparisons for follow-up, not age norms.
+
+There is no import, export or backup: accounts and progress stay in this browser on this device.
+
+## Accounts, therapist lock, goals and reports (aligned with the other apps)
+
+- **Child accounts:** the shared VB-MAPP-style window (`assets/accounts.js`, identical to the other apps except its key): one add row, search and sort, a list with drawn animal heads and a delete button behind one confirmation. Gender and birth date are edited in «جدول المقارنة».
+- **Therapist mode:** a lock switch in the header (closed lock, or green open lock). The code 013 opens it; one tap locks it again.
+- **Goals:** each road skill is a goal (`assets/intervention-goals.js`). While therapist mode is open, the report shows them in three groups: working on now (red), achieved (green, the app's own mastery rule) and suggested next on the road (yellow). Each estimate builds up or falls back with every practice session. The children's accounts dashboard in the tools site reads the same file.
+- **Reports:** bars only. «طباعة التقارير» opens a window to choose the progress summary and the goals; each downloads as its own PDF.
+- **Play breaks:** a short play break (`assets/interlude.js`) before each later step of a road day; the highlight colour changes per day.

@@ -4,22 +4,23 @@
  const clone=x=>JSON.parse(JSON.stringify(x));
  const nameKey=x=>x.normalize('NFKC').trim().toLocaleLowerCase();
  const admin=c=>c.role==='admin'||nameKey(c.name)==='hamada';
- function researchIds(data){
-  const used=new Set();let next=Math.max(1,Number.isSafeInteger(data.nextCaseNumber)?data.nextCaseNumber:1);
-  for(const c of data.children.filter(c=>!admin(c))){if(c.caseNumber!==undefined){if(!Number.isSafeInteger(c.caseNumber)||c.caseNumber<1||used.has(c.caseNumber))throw Error('أرقام الحالات غير صالحة.');used.add(c.caseNumber);next=Math.max(next,c.caseNumber+1);}}
-  for(const c of data.children.filter(c=>!admin(c)))if(c.caseNumber===undefined)c.caseNumber=next++;
-  data.nextCaseNumber=next;data.researchSourceId||=crypto.randomUUID();
- }
+ const GENDERS=['boy','girl'];
+ // Birth dates are optional calendar dates (YYYY-MM-DD), never in the future.
+ const validBirth=x=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return false;const d=new Date(x+'T00:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===x&&x>='1990-01-01'&&+d<=Date.now();};
  function validate(d,bank){
   if(d?.schema!==1||!Number.isInteger(d.revision)||!Array.isArray(d.children)||d.children.length>1000)throw Error('ملف الحسابات غير صالح.');
   const ids=new Set();
   for(const c of d.children){
    if(!c||typeof c.id!=='string'||ids.has(c.id)||typeof c.name!=='string'||!c.name.trim()||c.name.length>60||!Array.isArray(c.sessions))throw Error('بيانات حساب غير صالحة.');
    ids.add(c.id);
+   if(c.gender!==undefined&&!GENDERS.includes(c.gender))throw Error('الجنس غير صالح.');
+   if(c.birth!==undefined&&!validBirth(c.birth))throw Error('تاريخ الميلاد غير صالح.');
    for(const s of c.sessions){
     if(!s||typeof s.id!=='string'||!['screen','practice'].includes(s.mode)||!Array.isArray(s.items)||!s.items.length||s.items.length>bank.items.length||new Set(s.items).size!==s.items.length||s.items.some(id=>!bank.items.some(i=>i.id===id&&i.phase===s.mode))||!Array.isArray(s.results)||s.results.length>s.items.length||!s.results.every((r,i)=>r.item===s.items[i]&&['independent','help','incorrect','skip'].includes(r.outcome))||typeof s.helped!=='boolean'||typeof s.ended!=='boolean'||typeof s.complete!=='boolean'||!Array.isArray(s.selection))throw Error('بيانات جلسة غير صالحة.');
     if(s.complete&&(!s.ended||s.results.length!==s.items.length))throw Error('جلسة غير مكتملة.');
    }
+   if(c.games!==undefined&&(!Array.isArray(c.games)||c.games.length>2000||!c.games.every(g=>g&&bank.groups.some(x=>x.id===g.group)&&Number.isInteger(g.rounds)&&Number.isInteger(g.firstTry)&&g.firstTry>=0&&g.firstTry<=g.rounds)))throw Error('بيانات الألعاب غير صالحة.');
+   if(c.program!==undefined&&(!c.program||typeof c.program.done!=='object'||typeof c.program.unlocked!=='object'||c.program.rounds!==undefined&&(!Array.isArray(c.program.rounds)||!c.program.rounds.every(r=>Array.isArray(r)&&r.length&&r.every(g=>bank.groups.some(x=>x.id===g))))))throw Error('بيانات الخطة اليومية غير صالحة.');
   }
   if(d.active!==null&&!ids.has(d.active))throw Error('الحساب النشط غير موجود.');
   return d;
@@ -29,40 +30,81 @@
   active(){return this.data.children.find(c=>c.id===this.data.active)||null;}
   commit(fn){
    if(this.storage.getItem(KEY)!==this.raw)throw Error('تغيّرت البيانات في نافذة أخرى. أعد فتح التطبيق قبل المتابعة.');
-   const next=clone(this.data);fn(next);researchIds(next);next.revision++;validate(next,this.bank);const raw=JSON.stringify(next);this.storage.setItem(KEY,raw);this.data=next;this.raw=raw;return this.active();
+   const next=clone(this.data);fn(next);next.revision++;validate(next,this.bank);const raw=JSON.stringify(next);this.storage.setItem(KEY,raw);this.data=next;this.raw=raw;return this.active();
   }
-  signIn(name){name=String(name).trim();if(!name||name.length>60)throw Error('أدخل اسمًا من ١ إلى ٦٠ حرفًا.');return this.commit(d=>{let c=d.children.find(c=>nameKey(c.name)===nameKey(name));if(!c){c={id:crypto.randomUUID(),name,role:nameKey(name)==='hamada'?'admin':'child',created:new Date().toISOString(),sessions:[]};d.children.push(c);}d.active=c.id;});}
+  // New accounts may carry gender and birth date; an existing account only gains what it lacks.
+  signIn(name,profile={}){name=String(name).trim();if(!name||name.length>60)throw Error('أدخل اسمًا من ١ إلى ٦٠ حرفًا.');const extra=cleanProfile(profile);return this.commit(d=>{let c=d.children.find(c=>nameKey(c.name)===nameKey(name));if(!c){c={id:crypto.randomUUID(),name,role:nameKey(name)==='hamada'?'admin':'child',created:new Date().toISOString(),sessions:[]};d.children.push(c);}if(!admin(c))for(const [k,v]of Object.entries(extra))if(c[k]===undefined)c[k]=v;d.active=c.id;});}
+  // Sets or clears gender and birth date for one child; an empty value clears it.
+  setProfile(id,profile){const extra=cleanProfile(profile,true);return this.commit(d=>{const c=d.children.find(c=>c.id===id);if(!c||admin(c))throw Error('الحساب غير موجود.');for(const [k,v]of Object.entries(extra)){if(v===null)delete c[k];else c[k]=v;}});}
   select(id){return this.commit(d=>{if(!d.children.some(c=>c.id===id))throw Error('الحساب غير موجود.');d.active=id;});}
-  prepareResearch(){
-   if(this.storage.getItem(KEY)!==this.raw)throw Error('تغيّرت البيانات في نافذة أخرى. أعد فتح التطبيق قبل المتابعة.');
-   const next=clone(this.data);researchIds(next);if(JSON.stringify(next)!==JSON.stringify(this.data))this.commit(d=>Object.assign(d,next));return clone(this.data);
-  }
   draft(){return this.active()?.sessions.find(s=>!s.ended)||null;}
-  start(mode,group){if(!this.active())throw Error('اختر حسابًا.');if(this.draft())throw Error('أكمل الجلسة الحالية أو أنهها أولًا.');
-   const items=this.bank.items.filter(i=>i.phase===mode&&(!group||i.group===group)).map(i=>i.id);
+  // A daily-plan step passes a short item list and its day; otherwise the whole skill or screen is used.
+  start(mode,group,options={}){if(!this.active())throw Error('اختر حسابًا.');if(this.draft())throw Error('أكمل الجلسة الحالية أو أنهها أولًا.');
+   const pool=this.bank.items.filter(i=>i.phase===mode&&(!group||i.group===group)).map(i=>i.id);
+   const items=options.items?options.items.filter(id=>pool.includes(id)):pool;
    if(!['screen','practice'].includes(mode)||!items.length)throw Error('لا توجد مهام.');
-   this.commit(d=>{d.children.find(c=>c.id===d.active).sessions.push({id:crypto.randomUUID(),mode,group:group||null,started:new Date().toISOString(),items,results:[],helped:false,selection:[],ended:false,complete:false});});return this.draft();
+   this.commit(d=>{const session={id:crypto.randomUUID(),mode,group:group||null,started:new Date().toISOString(),items,results:[],helped:false,selection:[],ended:false,complete:false};if(Number.isInteger(options.day))Object.assign(session,{day:options.day,step:options.step});if(mode==='practice'&&SUPPORT.includes(options.support))session.support=options.support;d.children.find(c=>c.id===d.active).sessions.push(session);});return this.draft();
   }
+  // Up to two directions the child last missed or needed help with come back first (repetition),
+  // then the least-practised ones, so short daily sets still move through the whole skill.
+  nextPractice(group,count){const tally=new Map(),last=new Map();
+   for(const s of this.active()?.sessions||[])for(const r of s.results){if(r.outcome==='skip')continue;tally.set(r.item,(tally.get(r.item)||0)+1);last.set(r.item,r);}
+   const pool=this.bank.items.filter(i=>i.phase==='practice'&&i.group===group).map((i,order)=>({id:i.id,order,n:tally.get(i.id)||0,last:last.get(i.id)}));
+   const again=pool.filter(x=>x.last&&x.last.outcome!=='independent').sort((a,b)=>String(b.last.at).localeCompare(String(a.last.at))).slice(0,Math.min(2,count-1)).map(x=>x.id);
+   return [...again,...pool.filter(x=>!again.includes(x.id)).sort((a,b)=>a.n-b.n||a.order-b.order).slice(0,count-again.length).map(x=>x.id)];}
+  program(){const p=this.active()?.program;return {done:{...p?.done},unlocked:{...p?.unlocked},...(p?.rounds?{rounds:p.rounds.map(r=>[...r])}:{})};}
+  startRound(groups){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};(c.program.rounds||=[]).push([...groups]);});}
+  mastered(child=this.active()){return mastered(child,this.bank);}
+  support(group,child=this.active()){return support(child,this.bank,group);}
+  markStep(day,step){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};c.program.done[day+':'+step]||=new Date().toISOString();});}
+  unlockDay(day,open=true){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};if(open)c.program.unlocked[day]=true;else delete c.program.unlocked[day];});}
+  recordGame(group,rounds,firstTry){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.games||=[];c.games.push({group,at:new Date().toISOString(),rounds,firstTry});if(c.games.length>2000)c.games.splice(0,c.games.length-2000);});}
+  // Picture cards are a cue: showing them records help for the current item.
+  showPictures(){this.change(s=>{s.helped=true;s.pictures=true;});}
   change(fn){this.commit(d=>{const s=d.children.find(c=>c.id===d.active).sessions.find(s=>!s.ended);if(!s)throw Error('لا توجد جلسة نشطة.');fn(s);});}
   help(){this.change(s=>{s.helped=true;});}
   selectAnswer(key){const s=this.draft(),item=this.bank.items.find(i=>i.id===s?.items[s.results.length]);if(!item||!item.options.includes(key)||s.selection.length>=item.answer.length)return null;
    this.change(s=>{s.selection.push(key);});return this.draft().selection.length===item.answer.length?this.draft().selection.every((v,i)=>v===item.answer[i]):null;
   }
   retry(){this.change(s=>{s.helped=true;s.selection=[];});}
+  // Supported trial for a choice: the answer is pointed out on screen, which records help.
+  hint(){this.change(s=>{s.helped=true;s.hinted=true;});}
   score(outcome){if(!['independent','help','incorrect','skip'].includes(outcome))throw Error('نتيجة غير صالحة.');this.change(s=>{
    const item=this.bank.items.find(i=>i.id===s.items[s.results.length]);
    if(item.kind!=='observe'&&outcome==='independent'&&(s.selection.length!==item.answer.length||!s.selection.every((v,i)=>v===item.answer[i])))throw Error('أكمل الاستجابة أولًا.');
    if(outcome==='independent'&&s.helped)outcome='help';
-   s.results.push({item:item.id,outcome,at:new Date().toISOString()});s.helped=false;s.delivered=false;s.selection=[];
+   s.results.push({item:item.id,outcome,at:new Date().toISOString()});s.helped=false;s.delivered=false;s.pictures=false;s.hinted=false;s.selection=[];
    if(s.results.length===s.items.length){s.ended=true;s.complete=true;s.finished=new Date().toISOString();}
   });}
   finish(){this.change(s=>{s.ended=true;s.complete=false;s.finished=new Date().toISOString();});}
-  passes(child=this.active()){
-   const s=child?.sessions.filter(s=>s.mode==='screen'&&s.complete).at(-1);
-   return new Set(this.bank.groups.filter(g=>{const items=g.items.filter(i=>i.phase==='screen');return items.every(i=>s?.results.some(r=>r.item===i.id&&r.outcome==='independent'));}).map(g=>g.id));
-  }
-  import(raw){const data=validate(JSON.parse(raw),this.bank);this.commit(d=>{Object.keys(d).forEach(k=>delete d[k]);Object.assign(d,clone(data));});}
+  passes(child=this.active()){return checked(child,this.bank);}
+ }
+ function cleanProfile(profile={},clearing=false){const out={};
+  if('gender' in profile){const g=profile.gender||null;if(g!==null&&!GENDERS.includes(g))throw Error('الجنس غير صالح.');if(g!==null||clearing)out.gender=g;}
+  if('birth' in profile){const b=profile.birth||null;if(b!==null&&!validBirth(b))throw Error('تاريخ الميلاد غير صالح.');if(b!==null||clearing)out.birth=b;}
+  return out;}
+ // Skills with all screening directions independent in the latest completed screen.
+ function checked(child,bank){const s=child?.sessions.filter(s=>s.mode==='screen'&&s.complete).at(-1);
+  return new Set(bank.groups.filter(g=>g.items.filter(i=>i.phase==='screen').every(i=>s?.results.some(r=>r.item===i.id&&r.outcome==='independent'))).map(g=>g.id));}
+ // A skill is mastered when 8 of its last 10 practice directions were independent, on at least two days.
+ const practiceResults=(child,bank,group)=>{const ids=new Set(bank.items.filter(i=>i.group===group).map(i=>i.id));return (child?.sessions||[]).filter(s=>s.mode==='practice').flatMap(s=>s.results).filter(r=>ids.has(r.item)&&r.outcome!=='skip');};
+ function mastered(child,bank){return new Set(bank.groups.filter(g=>{const last=practiceResults(child,bank,g.id).slice(-10);return last.length===10&&last.filter(r=>r.outcome==='independent').length>=8&&new Set(last.map(r=>String(r.at).slice(0,10))).size>=2;}).map(g=>g.id));}
+ // Support fades with success (most-to-least prompting with a time delay), from the last five directions:
+ // 'pictures' shows the picture cards with the direction, 'delay' shows them after a short wait,
+ // 'none' leaves them for the adult to show. A new skill starts at 'delay': a chance alone, then help.
+ const SUPPORT=['pictures','delay','none'];
+ function support(child,bank,group){const last=practiceResults(child,bank,group).slice(-5);if(last.length<3)return 'delay';
+  const alone=last.filter(r=>r.outcome==='independent').length,helped=last.filter(r=>r.outcome==='help').length;
+  return alone>=3?'none':alone+helped>=3?'delay':'pictures';}
+ // Age in whole months on a given day, or null without a birth date.
+ function ageMonths(birth,on=new Date()){if(!birth)return null;const [y,m,d]=birth.split('-').map(Number);let months=(on.getFullYear()-y)*12+on.getMonth()+1-m;if(on.getDate()<d)months--;return Math.max(0,months);}
+ // One child's figures for the comparison table. Rates are independent / assessed (skips excluded).
+ function summary(child,bank,on=new Date()){
+  const rate=list=>{const assessed=list.filter(r=>r.outcome!=='skip');return assessed.length?assessed.filter(r=>r.outcome==='independent').length/assessed.length:null;};
+  const screen=child.sessions.filter(s=>s.mode==='screen'&&s.complete).at(-1),practice=child.sessions.filter(s=>s.mode==='practice').flatMap(s=>s.results);
+  const times=[...child.sessions.flatMap(s=>[s.started,s.finished,...s.results.map(r=>r.at)]),...(child.games||[]).map(g=>g.at)].filter(Boolean).sort();
+  return {age:ageMonths(child.birth,on),gender:child.gender||null,screened:!!screen,checked:checked(child,bank).size,screenRate:screen?rate(screen.results):null,practiceRate:rate(practice),practiced:practice.filter(r=>r.outcome!=='skip').length,games:(child.games||[]).length,last:times.at(-1)||null};
  }
  function counts(results=[]){return results.reduce((a,r)=>{a[r.outcome]++;return a;},{independent:0,help:0,incorrect:0,skip:0});}
- const api={Store,KEY,counts,validate};if(typeof module!=='undefined')module.exports=api;else root.FollowModel=api;
+ const api={Store,KEY,counts,validate,summary,ageMonths,mastered,support,SUPPORT,GENDERS,isAdmin:admin};if(typeof module!=='undefined')module.exports=api;else root.FollowModel=api;
 })(globalThis);
