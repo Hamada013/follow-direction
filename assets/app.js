@@ -1,7 +1,7 @@
 (()=>{
  'use strict';
  const B=FollowBank,M=FollowModel,PR=FollowProgram,PIC=FollowPictures,GB=FollowGameBank,$=s=>document.querySelector(s),app=$('#app');
- const paths={home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3Z"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/>',chart:'<path d="M4 3v18h18M8 16v-5m5 5V6m5 10V9"/>',check:'<path d="m5 12 4 4L20 5"/>',cross:'<path d="m6 6 12 12M18 6 6 18"/>',help:'<path d="M8 9V5a2 2 0 0 1 4 0v7-3a2 2 0 0 1 4 0v4-2a2 2 0 0 1 4 0v6c0 6-11 6-13 1l-4-6a2 2 0 0 1 3-2l2 2Z"/>',skip:'<path d="m5 5 10 7L5 19ZM19 5v14"/>',play:'<path d="m8 4 13 8-13 8Z"/>',ear:'<path d="M6 10C6-1 22 0 20 10c-1 5-6 4-6 9-1 5-7 3-7 0m3-9c0-6 7-5 6 0-1 3-3 2-3 5"/>',screen:'<path d="M9 4h11v18H4V4h5m0-2h6v4H9ZM8 11l1 1 2-3m3 2h3M8 17l1 1 2-3m3 2h3"/>',flag:'<path d="M5 22V3c5-4 9 4 16 0v12c-7 4-11-4-16 0"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M3 17v5h18v-5"/>',upload:'<path d="M12 17V5m-5 5 5-5 5 5M3 17v5h18v-5"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/>',back:'<path d="M5 12h15m-6-6 6 6-6 6"/>',repeat:'<path d="M4 8a9 9 0 1 1-1 9M4 2v6h6"/>',print:'<path d="M6 8V2h12v6M6 18H2V8h20v10h-4M6 14h12v8H6Z"/>',save:'<path d="M4 2h14l4 4v16H2V2Zm3 0v7h10V2M7 22v-8h10v8"/>',book:'<path d="M12 5C8 1 2 3 2 3v17s6-2 10 2c4-4 10-2 10-2V3s-6-2-10 2Zm0 0v17"/>',
+ const paths={unlock:'<rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 7.6-1.8M12 14v3"/>',home:'<path d="m3 10 9-7 9 7v11h-6v-7H9v7H3Z"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/>',chart:'<path d="M4 3v18h18M8 16v-5m5 5V6m5 10V9"/>',check:'<path d="m5 12 4 4L20 5"/>',cross:'<path d="m6 6 12 12M18 6 6 18"/>',help:'<path d="M8 9V5a2 2 0 0 1 4 0v7-3a2 2 0 0 1 4 0v4-2a2 2 0 0 1 4 0v6c0 6-11 6-13 1l-4-6a2 2 0 0 1 3-2l2 2Z"/>',skip:'<path d="m5 5 10 7L5 19ZM19 5v14"/>',play:'<path d="m8 4 13 8-13 8Z"/>',ear:'<path d="M6 10C6-1 22 0 20 10c-1 5-6 4-6 9-1 5-7 3-7 0m3-9c0-6 7-5 6 0-1 3-3 2-3 5"/>',screen:'<path d="M9 4h11v18H4V4h5m0-2h6v4H9ZM8 11l1 1 2-3m3 2h3M8 17l1 1 2-3m3 2h3"/>',flag:'<path d="M5 22V3c5-4 9 4 16 0v12c-7 4-11-4-16 0"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M3 17v5h18v-5"/>',upload:'<path d="M12 17V5m-5 5 5-5 5 5M3 17v5h18v-5"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/>',back:'<path d="M5 12h15m-6-6 6 6-6 6"/>',repeat:'<path d="M4 8a9 9 0 1 1-1 9M4 2v6h6"/>',print:'<path d="M6 8V2h12v6M6 18H2V8h20v10h-4M6 14h12v8H6Z"/>',save:'<path d="M4 2h14l4 4v16H2V2Zm3 0v7h10V2M7 22v-8h10v8"/>',book:'<path d="M12 5C8 1 2 3 2 3v17s6-2 10 2c4-4 10-2 10-2V3s-6-2-10 2Zm0 0v17"/>',
   star:'<path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9Z"/>',road:'<path d="M9 3c-6 4 6 6 0 9s6 6 0 9M15 3c6 4-6 6 0 9s-6 6 0 9"/>',game:'<rect x="2" y="7" width="20" height="11" rx="5.5"/><path d="M7 10v5m-2.5-2.5h5M16 11h.01M18 14h.01"/>',picture:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',moon:'<path d="M20 15A8 8 0 0 1 9 4a8 8 0 1 0 11 11Z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',key:'<circle cx="8" cy="15" r="5"/><path d="m12 11 9-9m-4 4 3 3m-6 0 2 2"/>',table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 9v11"/>'};
  const icon=name=>`<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name]||paths.play}</svg>`;
  const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,14 +17,13 @@
  function showModal(title,html,actions=[]){$('#modal-title').textContent=title;$('#modal-body').innerHTML=html;const row=document.createElement('div');row.className='dialog-actions';for(const [text,fn]of actions){const b=document.createElement('button');b.className='primary';b.textContent=text;b.onclick=()=>{$('#modal').close();fn();};row.append(b);}$('#modal-body').append(row);$('#modal').showModal();}
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
  // Header keeps account, guide and offline download; the bottom bar moves between screens.
- function toolbar(){const t=$('#toolbar');t.replaceChildren();t.append(button('user','حساب الطفل',profiles),button('info','دليل الأهل',guide),button('download','تنزيل للاستخدام دون إنترنت',()=>window.FollowOffline?.open()));tabbar();}
- function tabbar(){const bar=$('#tabbar'),draft=store.active()&&store.draft(),here={home:'home',road:'road',day:'road',games:'games',game:'games',practice:'practice',task:'screen',report:'report',compare:'report'}[view];
+ function toolbar(){const t=$('#toolbar');t.replaceChildren();const lock=button(therapist?'unlock':'lock',therapist?'وضع المعالج مفتوح · اضغط للقفل':'وضع المعالج مقفل · اضغط وأدخل الرمز',therapistToggle,'lock-switch');lock.setAttribute('aria-pressed',String(therapist));const user=button('user','حسابات الأطفال',profiles);const chip=store?.active()&&window.SuiteAccounts?.avatarFor(store.active());if(chip){const holder=document.createElement('span');holder.className='suite-account-chip';holder.append(chip);user.querySelector('svg').replaceWith(holder);}t.append(lock,user,button('info','دليل الأهل',guide),button('download','تنزيل للاستخدام دون إنترنت',()=>window.FollowOffline?.open()));tabbar();}
+ function tabbar(){const bar=$('#tabbar'),draft=store?.active()&&store.draft(),here={home:'home',road:'road',day:'road',games:'games',game:'games',practice:'practice',task:'screen',report:'report',compare:'report'}[view];
   const item=(id,name,text,fn)=>{const b=button(name,text,fn,'tab');b.insertAdjacentHTML('beforeend',`<span>${text}</span>`);if(id===here)b.setAttribute('aria-current','page');bar.append(b);return b;};
   bar.replaceChildren();
   item('home','home','الرئيسية',()=>go('home'));item('road','road','الطريق',()=>needAccount(()=>go('road')));item('games','game','الألعاب',()=>needAccount(()=>go('games')));item('practice','ear','التدريب',()=>needAccount(()=>go('practice')));
   item('screen',draft?'play':'screen',draft?'متابعة الجلسة':'الفرز',()=>needAccount(()=>{if(store.draft())go('task');else confirmStart('screen');}));
   item('report','chart','التقرير',()=>needAccount(()=>{reportId=null;go('report');}));
-  const t=item('therapist','key','وضع المعالج',therapistToggle);t.classList.add('therapist');t.setAttribute('aria-pressed',String(therapist));if(therapist){t.title='وضع المعالج مفعّل: كل الأيام مفتوحة. اضغط للإيقاف.';t.querySelector('span').textContent='المعالج ✓';}
  }
  function needAccount(fn){if(store.active())fn();else profiles();}
  function go(next){stop();view=next;render();app.focus({preventScroll:true});app.scrollTop=0;window.scrollTo(0,0);}
@@ -37,7 +36,7 @@
  const lockOf=(program,d)=>therapist?null:PR.lockReason(program,d);
  function setTherapist(on){therapist=on;try{if(on)localStorage.setItem(THERAPIST_KEY,'1');else localStorage.removeItem(THERAPIST_KEY);}catch{}render();alert(on?'وضع المعالج مفعّل: كل الأيام والخطوات مفتوحة.':'أُوقف وضع المعالج.');}
  function therapistToggle(){
-  if(therapist){showModal('وضع المعالج','<p>وضع المعالج مفعّل وكل الأيام مفتوحة. هل تريد إيقافه؟</p>',[['إيقاف وضع المعالج',()=>setTherapist(false)]]);return;}
+  if(therapist){setTherapist(false);return;}
   $('#modal-title').textContent='وضع المعالج';
   $('#modal-body').innerHTML='<form id="therapist-form"><p>أدخل رمز المعالج لفتح كل الأيام والخطوات على هذا الجهاز.</p><label for="therapist-code">الرمز</label><input id="therapist-code" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required><p class="form-error" role="alert"></p><div class="dialog-actions"><button type="submit" class="primary">فتح الكل</button></div></form>';
   $('#therapist-form').onsubmit=e=>{e.preventDefault();if($('#therapist-code').value.trim()===THERAPIST_CODE){$('#modal').close();setTherapist(true);}else{$('#therapist-form [role=alert]').textContent='الرمز غير صحيح.';$('#therapist-code').select();}};
@@ -75,7 +74,9 @@
  function start(mode,group,options={}){if(mode==='practice'&&group&&!options.support)options={...options,support:store.support(group)};if(run(()=>store.start(mode,group,options)))go('task');}
 
  // ---------- Road and days ----------
- function runStep(day,i){const s=PR.days(store.program())[day]?.steps[i];if(!s)return;
+ function runStep(day,i,afterBreak=false){const s=PR.days(store.program())[day]?.steps[i];if(!s)return;
+  if(i>0&&!afterBreak&&window.VocInterlude&&!store.draft()){window.VocInterlude.show(()=>runStep(day,i,true));return;}
+  if(i===0)window.pickGlowColour?.();
   if(s.type==='game'){gameCtx={group:s.group,day,step:i};go('game');return;}
   if(store.draft()){showModal('جلسة محفوظة','<p>تابع الجلسة الحالية أو أنهها قبل بدء تدريب اليوم.</p>',[['متابعة',()=>go('task')],['إنهاء الجلسة',endSession]]);return;}
   start('practice',s.group,{items:store.nextPractice(s.group,s.count),day,step:i});
@@ -184,8 +185,8 @@
 
  // ---------- Accounts ----------
  function download(name,text,type){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
- function profiles(){stop();(async()=>{if(store.data.children.length&&!(await ChildAccountGate.request()))return;const dialog=$('#profiles');$('#account-list').replaceChildren();SuiteAccounts.render($('#account-list'),store.data.children,c=>SuiteAccounts.row(c,button('user',c.name,()=>run(()=>{store.select(c.id);dialog.close();reportId=null;go('home');}))));dialog.querySelector('[role=alert]').textContent='';$('#compare-open').hidden=!store.data.children.some(c=>!M.isAdmin(c));$('#child-birth').max=new Date().toISOString().slice(0,10);dialog.showModal();window.StyledDropdowns?.enhance($('#name-form'));$('#child-name').focus();})();}
- $('#name-form').onsubmit=e=>{e.preventDefault();try{store.signIn($('#child-name').value,{gender:$('#child-gender').value,birth:$('#child-birth').value});$('#name-form').reset();$('#profiles').close();reportId=null;go('home');}catch(err){$('#profiles [role=alert]').textContent=err.message;}};
+ function profiles(){stop();(async()=>{if(store.data.children.length&&!(await ChildAccountGate.request()))return;const dialog=$('#profiles');$('#account-list').replaceChildren();SuiteAccounts.render($('#account-list'),store.data.children.filter(c=>!M.isAdmin(c)),c=>{const pick=document.createElement('button');pick.type='button';pick.textContent=c.name;pick.onclick=()=>run(()=>{store.select(c.id);dialog.close();reportId=null;go('home');});return SuiteAccounts.row(c,pick);});dialog.querySelector('[role=alert]').textContent='';$('#compare-open').hidden=!store.data.children.some(c=>!M.isAdmin(c));dialog.querySelector('[data-close]').hidden=!store.active();dialog.showModal();$('#child-name').focus();})();}
+ $('#name-form').onsubmit=e=>{e.preventDefault();try{store.signIn($('#child-name').value.replace(/\s+/g,' '),{});$('#name-form').reset();$('#profiles').close();reportId=null;go('home');}catch(err){$('#profiles [role=alert]').textContent=err.message;}};
  $('#compare-open').innerHTML=icon('table')+'<span>جدول المقارنة</span>';$('#compare-open').onclick=()=>{$('#profiles').close();go('compare');};
 
  // ---------- Comparison table ----------
@@ -245,14 +246,65 @@
  function report(){const c=store.active(),sessions=c.sessions.filter(s=>s.results.length||s.ended),s=sessions.find(s=>s.id===reportId)||sessions.at(-1),program=store.program(),games=c.games||[];
   app.innerHTML=`<div class="section-heading"><h1>التقرير</h1><div class="no-print" id="report-tools"></div></div><p class="report-name">${esc(c.name)} · ${shortDate(Date.now())}</p>`;
   if(!s&&!games.length){app.insertAdjacentHTML('beforeend','<div class="card empty">لا توجد استجابات مسجلة بعد.</div>');return;}
-  $('#report-tools').append(button('print','طباعة التقرير أو حفظ PDF',()=>window.print()));
+  {const b=button('print','طباعة التقارير',()=>printReports(),'print-reports');b.insertAdjacentHTML('beforeend','<span>طباعة التقارير</span>');$('#report-tools').append(b);}
   const practiced=c.sessions.filter(x=>x.mode==='practice').flatMap(x=>x.results).filter(r=>r.outcome!=='skip'),indep=practiced.filter(r=>r.outcome==='independent').length;
   app.insertAdjacentHTML('beforeend',`<section class="card overview"><h2>نظرة عامة</h2><div class="tiles"><span>${icon('road')}<b>${(()=>{const r=PR.roundCount(program),[f,e]=PR.roundRange(program,r);let n=0;for(let d=f;d<e;d++)if(PR.isDayDone(program,d))n++;return `${num(n)}/${num(e-f)}`;})()}</b>أيام الطريق${PR.roundCount(program)>1?` · الجولة ${num(PR.roundCount(program))}`:''}</span><span>${icon('star')}<b>${num(store.mastered().size)}/${num(B.groups.length)}</b>مهارات متقنة</span><span>${icon('ear')}<b>${num(practiced.length)}</b>تعليمات في التدريب</span><span>${icon('check')}<b>${practiced.length?num(Math.round(100*indep/practiced.length))+'٪':'—'}</b>استجابة مستقلة في التدريب</span><span>${icon('game')}<b>${num(games.length)}</b>ألعاب مكتملة</span></div><p class="muted">الألعاب للعب والتعزيز فقط ولا تدخل في نسب الفرز أو التدريب.</p></section>`);
   const rows=skillProfile(c),dot=o=>`<i class="dot-${o}" title="${OUT.find(x=>x[0]===o)[1]}"></i>`;
   app.insertAdjacentHTML('beforeend',`<section class="card profile"><h2>ملف المهارات</h2><div class="legend">${OUT.map(([,t,color])=>`<span><i style="--color:${color}"></i>${t}</span>`).join('')}</div><div class="profile-table" role="table" aria-label="ملف المهارات"><div class="profile-row head" role="row"><span role="columnheader">المهارة</span><span role="columnheader">آخر فرز</span><span role="columnheader">آخر ١٠ في التدريب</span><span role="columnheader">الجلسات</span><span role="columnheader">الحالة</span></div>${rows.map(r=>`<div class="profile-row" role="row"><span role="cell"><b>${esc(r.g.label)}</b>${r.plays.length?`<small>${icon('game')} ${num(r.plays.length)}</small>`:''}</span><span role="cell" class="dots" aria-label="${r.screenResults.length?r.screenResults.map(o=>OUT.find(x=>x[0]===o)[1]).join('، '):'لا يوجد فرز مكتمل'}">${r.screenResults.length?r.screenResults.map(dot).join(''):'<small>—</small>'}</span><span role="cell">${r.recent.length?`<span class="meter" aria-hidden="true"><i style="width:${100*r.independent/r.recent.length}%"></i></span><small>${num(r.independent)} مستقل من ${num(r.recent.length)}</small>`:'<small>—</small>'}</span><span role="cell" class="spark" aria-label="نسبة الاستجابة المستقلة في آخر الجلسات: ${r.sessions.map(v=>v+'٪').join('، ')||'لا يوجد'}">${r.sessions.map(v=>`<i style="height:${Math.max(8,v)}%"></i>`).join('')||'<small>—</small>'}</span><span role="cell"><em class="status ${r.status[0]}">${r.status[1]}</em></span></div>`).join('')}</div></section>`);
+  if(therapist)app.insertAdjacentHTML('beforeend',goalsSection(c));
   if(s)sessionReport(c,sessions,s);
   const latestScreen=c.sessions.filter(x=>x.mode==='screen'&&x.complete).at(-1),passes=store.passes(),focus=PR.ORDER.find(id=>!passes.has(id)&&!store.mastered().has(id));
   app.insertAdjacentHTML('beforeend',`<section class="card"><h2>خطة التدريب</h2><p>${latestScreen?`آخر فرز مكتمل: ${date(latestScreen.finished)}`:'لم يكتمل فرز بعد.'}</p><p>${passes.size?'محدّد للتجاوز: '+B.groups.filter(g=>passes.has(g.id)).map(g=>esc(g.label)).join('، '):'لا توجد مهارات محددة للتجاوز.'}</p><p>للتدريب أو إعادة التحقق: ${B.groups.filter(g=>!passes.has(g.id)).map(g=>esc(g.label)).join('، ')||'يمكن إعادة تدريب أي مهارة عند الحاجة.'}</p>${focus?`<p>اقتراح للبيت: العبوا لعبة «${esc(GB.byGroup(focus).title)}» وتدرّبوا على «${esc(label(focus))}» بأشياء حقيقية من البيت.</p>`:''}</section>`);
+ }
+
+ // ---------- Skill goals (therapist mode): red = working on now, green = achieved, yellow = suggested next ----------
+ const G=window.InterventionGoals;
+ function goalGroups(c){const est=G.estimate(c),plan=G.ORDER.filter(id=>est[id]),done=plan.filter(id=>est[id].achieved||store.mastered(c).has(id)),working=plan.filter(id=>!done.includes(id));return {est,done,working,suggested:G.suggest(plan,done)};}
+ function goalsSection(c){
+  const {est,done,working,suggested}=goalGroups(c);
+  const row=id=>{const goal=G.short(id),e=est[id],value=e?.percent??0;return `<div class="goal-row"><div><b>${esc(goal.text)}</b><small>${esc(goal.where)}${e?` · ${num(e.sessions)} جلسة`:''}</small></div><span class="meter" aria-hidden="true"><i style="width:${value}%"></i></span><b class="goal-pct" dir="ltr">${e?value+'%':'—'}</b></div>`;};
+  const group=(state,title,list,empty)=>`<div class="goal-group" data-state="${state}"><h3>${title} (${num(list.length)})</h3>${list.length?list.map(row).join(''):`<p class="muted">${empty}</p>`}</div>`;
+  return `<section class="card goals-report"><h2>الأهداف</h2><p class="muted">التقدير يرتفع أو ينخفض مع كل جلسة تدريب. تتحقق المهارة عند ٨٠٪: ٨ من آخر ١٠ تعليمات بدون مساعدة في يومين على الأقل.</p>${group('working','نعمل عليها الآن',working,'لا توجد مهارات قيد التدريب.')}${group('done','تحققت',done,'لم تتحقق مهارة بعد.')}${group('suggested','مقترحة للمرحلة القادمة',suggested,'لا توجد اقتراحات الآن.')}</section>`;
+ }
+ // ---------- «طباعة التقارير»: choose the reports, each one downloads as its own PDF ----------
+ let printDialog;
+ function choosePrint(){
+  const choices=[['summary','ملخص التقدم','أيام الطريق والمهارات والتدريب']];if(therapist)choices.push(['goals','الأهداف','نعمل عليها · تحققت · مقترحة']);
+  if(!printDialog){printDialog=document.createElement('dialog');printDialog.className='print-dialog';printDialog.setAttribute('aria-labelledby','print-title');printDialog.innerHTML='<h2 id="print-title">طباعة التقارير</h2><p>اختر التقارير. كل تقرير يُنزَّل في ملف PDF منفصل.</p><div class="print-list" role="group" aria-label="التقارير"></div><div class="dialog-actions"><button type="button" class="primary" data-go>تنزيل</button><button type="button" data-cancel>إلغاء</button></div>';document.body.append(printDialog);}
+  const list=printDialog.querySelector('.print-list'),go=printDialog.querySelector('[data-go]');
+  list.innerHTML=choices.map(([id,title,hint])=>`<button type="button" class="print-choice" data-choice="${id}" aria-pressed="true"><span class="print-tick" aria-hidden="true">${icon('check')}</span><span><b>${title}</b><small>${hint}</small></span></button>`).join('');
+  const sync=()=>{go.disabled=!list.querySelector('[aria-pressed=true]');};list.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));sync();});sync();
+  printDialog.showModal();go.focus();
+  return new Promise(resolve=>{go.onclick=()=>{const ids=[...list.querySelectorAll('[aria-pressed=true]')].map(b=>b.dataset.choice);printDialog.close();resolve(ids);};printDialog.querySelector('[data-cancel]').onclick=()=>{printDialog.close();resolve(null);};printDialog.oncancel=()=>resolve(null);});
+ }
+ async function printReports(){
+  const c=store.active(),chosen=await choosePrint();if(!chosen?.length)return;
+  const name=String(c.name).replace(/[^\p{L}\p{N}_-]/gu,'_'),day=new Date().toISOString().slice(0,10);
+  try{for(const [index,id] of chosen.entries()){if(index)await new Promise(r=>setTimeout(r,900));(await pdf(c,id)).save(`اتبع-التعليمات-${id==='goals'?'الأهداف':'التقدم'}-${name}-${day}.pdf`);}}
+  catch(error){console.error(error);alert('تعذّر إنشاء التقرير. أعد المحاولة.');}
+ }
+ // A4 pages drawn on canvas (right to left) and saved through jsPDF.
+ async function pdf(c,kind){
+  const jsPDF=window.jspdf?.jsPDF;if(!jsPDF)throw Error('PDF library unavailable');await document.fonts?.ready;
+  const W=1240,H=1754,M=90,pages=[],font=getComputedStyle(document.body).fontFamily;let canvas,x,y;
+  const page=()=>{canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;x=canvas.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);y=M;pages.push(canvas);};
+  const text=(value,at,size,weight=400,color='#22445a',align='right')=>{x.font=`${weight} ${size}px ${font}`;x.fillStyle=color;x.textAlign=align;x.direction=/[؀-ۿ]/.test(String(value))?'rtl':'ltr';x.fillText(String(value),at,y);};
+  const need=h=>{if(y+h>H-M)page();};
+  const bar=(label,value,note,color='#16a34a')=>{need(100);y+=40;text(label,W-M,28,700);text(value==null?'—':value+'%',M,26,700,'#5c7285','left');y+=20;x.fillStyle='#eaf0f4';x.beginPath();x.roundRect(M,y,W-2*M,24,12);x.fill();if(value){x.fillStyle=color;x.beginPath();x.roundRect(M+(W-2*M)*(1-value/100),y,(W-2*M)*value/100,24,12);x.fill();}y+=24;if(note){y+=32;text(note,W-M,21,400,'#5c7285');}y+=12;};
+  page();text('اتبع التعليمات',W-M,24,700,'#0369a1');y+=58;text(`${kind==='goals'?'الأهداف':'تقرير التقدم'} · ${c.name}`,W-M,44,800);y+=44;text(new Intl.DateTimeFormat('en-GB').format(new Date()),W-M,24,400,'#5c7285');y+=28;x.strokeStyle='#dceaf4';x.lineWidth=2;x.beginPath();x.moveTo(M,y);x.lineTo(W-M,y);x.stroke();y+=30;
+  if(kind==='goals'){
+   const {est,done,working,suggested}=goalGroups(c);
+   for(const [title,list,color] of [['نعمل عليها الآن',working,'#dc2626'],['تحققت',done,'#16a34a'],['مقترحة للمرحلة القادمة',suggested,'#ca8a04']]){need(90);y+=50;text(`${title} (${list.length})`,W-M,32,800,color);if(!list.length){y+=40;text('—',W-M,24,400,'#7a8e9b');}for(const id of list){const goal=G.short(id);bar(goal.text,est[id]?.percent??null,goal.where,color);}}
+   need(80);y+=60;text('تتحقق المهارة عند ٨٠٪: ٨ من آخر ١٠ تعليمات بدون مساعدة في يومين على الأقل.',W-M,20,400,'#7a8e9b');
+  }else{
+   const practiced=c.sessions.filter(s=>s.mode==='practice').flatMap(s=>s.results).filter(r=>r.outcome!=='skip'),indep=practiced.filter(r=>r.outcome==='independent').length;
+   y+=30;text(`مهارات متقنة: ${store.mastered(c).size} من ${B.groups.length} · تعليمات في التدريب: ${practiced.length} · ألعاب: ${(c.games||[]).length}`,W-M,24,700);
+   bar('الاستجابة المستقلة في التدريب',practiced.length?Math.round(100*indep/practiced.length):null);
+   need(80);y+=50;text('المهارات (آخر ١٠ تعليمات في التدريب)',W-M,30,800);
+   for(const r of skillProfile(c))bar(r.g.label,r.recent.length?Math.round(100*r.independent/r.recent.length):null,r.status[1]);
+   need(60);y+=50;text('الألعاب للعب والتعزيز فقط ولا تدخل في النسب.',W-M,20,400,'#7a8e9b');
+  }
+  const doc=new jsPDF({unit:'mm',format:'a4',compress:true});pages.forEach((sheet,i)=>{if(i)doc.addPage();doc.addImage(sheet.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297);});return doc;
  }
  function sessionReport(c,sessions,s){reportId=s.id;
   const wrap=document.createElement('div');wrap.className='session-pick no-print';wrap.innerHTML='<label for="session-choice">الجلسة</label>';const chooser=document.createElement('select');chooser.id='session-choice';for(const entry of [...sessions].reverse()){const o=document.createElement('option');o.value=entry.id;o.textContent=`${entry.mode==='screen'?'فرز':Number.isInteger(entry.day)?dayTitle(store.program(),entry.day):'تدريب'} · ${date(entry.started)}${entry.complete?'':' · غير مكتمل'}`;o.selected=entry.id===s.id;chooser.append(o);}chooser.onchange=()=>{reportId=chooser.value;report();};wrap.append(chooser);app.append(wrap);window.StyledDropdowns?.enhance(wrap);

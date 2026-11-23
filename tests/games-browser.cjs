@@ -12,7 +12,7 @@ const rounds=new Map(GB.games.flatMap(g=>g.rounds.map(r=>[r.audio,{...r,type:g.t
  try{
   browser=await playwright[engine].launch(engine==='chromium'?{headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{headless:true});
   const context=await browser.newContext({viewport:{width:vw,height:vh},hasTouch:true,serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.locator('#child-name').fill('سما');await page.getByRole('button',{name:'دخول',exact:true}).click();
+  await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.locator('#child-name').fill('سما');await page.getByRole('button',{name:'دخول / إضافة',exact:true}).click();
   const noOverflow=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');
   let dragTurn=0;
   async function drag(from,to){const a=await from.boundingBox(),b=await to.boundingBox();await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move(a.x+a.width/2+12,a.y+a.height/2+12,{steps:3});await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});await page.mouse.up();}
@@ -50,7 +50,7 @@ const rounds=new Map(GB.games.flatMap(g=>g.rounds.map(r=>[r.audio,{...r,type:g.t
   for(let i=0;i<5;i++)await page.getByRole('button',{name:'استجابة مستقلة',exact:true}).click();
   const day=await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('follow-direction-children-v1')),s=d.children.find(c=>c.id===d.active).sessions.at(-1);return {n:s.items.length,day:s.day,first:s.results[0].outcome,rest:s.results.slice(1).map(r=>r.outcome)};});
   assert.deepEqual(day,{n:5,day:0,first:'help',rest:['independent','independent','independent','independent']});
-  await page.locator('.day-step.now').click();for(let i=0;i<GB.ROUNDS_PER_PLAY;i++)await playRound();await page.getByRole('button',{name:'تم',exact:true}).click();
+  await page.locator('.day-step.now').click();await page.waitForTimeout(300);if(await page.locator('.interlude').count())await page.locator('.interlude .ring-go').click();for(let i=0;i<GB.ROUNDS_PER_PLAY;i++)await playRound();await page.getByRole('button',{name:'تم',exact:true}).click();
   await page.getByRole('heading',{name:'اتبع التعليمات',exact:true}).waitFor();await page.getByRole('button',{name:'تم',exact:true}).click();
   assert.match(await page.locator('.today').innerText(),/غدًا/);
   await page.getByRole('button',{name:'الطريق',exact:true}).click();await noOverflow();
@@ -60,12 +60,12 @@ const rounds=new Map(GB.games.flatMap(g=>g.rounds.map(r=>[r.audio,{...r,type:g.t
   // Therapist mode: a wrong code changes nothing; 013 opens every day and step; turning it off locks them again.
   const road=()=>page.locator('#tabbar').getByRole('button',{name:'الطريق',exact:true}).click();
   await road();assert.ok(await page.locator('.station.locked').count()>0);
-  await page.locator('#tabbar').getByRole('button',{name:'وضع المعالج'}).click();await page.locator('#therapist-code').fill('123');await page.getByRole('button',{name:'فتح الكل'}).click();await page.getByText('الرمز غير صحيح.').waitFor();
+  await page.locator('#toolbar .lock-switch').click();await page.locator('#therapist-code').fill('123');await page.getByRole('button',{name:'فتح الكل'}).click();await page.getByText('الرمز غير صحيح.').waitFor();
   await page.locator('#therapist-code').fill('013');await page.getByRole('button',{name:'فتح الكل'}).click();await page.locator('.road').waitFor();
-  assert.equal(await page.locator('.station.locked').count(),0);assert.equal(await page.locator('#tabbar .therapist').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('.station.locked').count(),0);assert.equal(await page.locator('#toolbar .lock-switch').getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:/^اليوم 5:/}).click();await page.getByRole('heading',{name:'اليوم ٥',exact:true}).waitFor();assert.equal(await page.locator('.day-step:disabled').count(),0);
   await page.reload();await road();assert.equal(await page.locator('.station.locked').count(),0,'Therapist mode stays on after reload');
-  await page.locator('#tabbar').getByRole('button',{name:'وضع المعالج'}).click();await page.getByRole('button',{name:'إيقاف وضع المعالج'}).click();
+  await page.locator('#toolbar .lock-switch').click();
   await road();assert.ok(await page.locator('.station.locked').count()>0);
   // The report shows the plan, practice and play.
   await page.locator('#tabbar').getByRole('button',{name:'التقرير',exact:true}).click();

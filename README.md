@@ -47,3 +47,11 @@ Recordings: directions are `assets/audio/001–253.mp3`; mini-game prompts are `
 Inside Accounts (behind the parent calculation), «جدول المقارنة» opens a table of every child on this device: gender, birth date, age, skills checked in the latest completed screen, independent rate in that screen and in all practice, practice directions, road days and games. Filter by gender and age group, sort by age, rates or name, and print it. Gender and birth date are optional when adding a child and can be edited in the table. A second table averages each age group (whole years) by boys, girls and everyone; each child counts once, and an unrecorded gender appears only under everyone. These are descriptive comparisons for follow-up, not age norms.
 
 There is no import, export or backup: accounts and progress stay in this browser on this device.
+
+## Accounts, therapist lock, goals and reports (aligned with the other apps)
+
+- **Child accounts:** the shared VB-MAPP-style window (`assets/accounts.js`, identical to the other apps except its key): one add row, search and sort, a list with drawn animal heads and a delete button behind one confirmation. Gender and birth date are edited in «جدول المقارنة».
+- **Therapist mode:** a lock switch in the header (closed lock, or green open lock). The code 013 opens it; one tap locks it again.
+- **Goals:** each road skill is a goal (`assets/intervention-goals.js`). While therapist mode is open, the report shows them in three groups: working on now (red), achieved (green, the app's own mastery rule) and suggested next on the road (yellow). Each estimate builds up or falls back with every practice session. The children's accounts dashboard in the tools site reads the same file.
+- **Reports:** bars only. «طباعة التقارير» opens a window to choose the progress summary and the goals; each downloads as its own PDF.
+- **Play breaks:** a short play break (`assets/interlude.js`) before each later step of a road day; the highlight colour changes per day.
