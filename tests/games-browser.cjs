@@ -14,14 +14,15 @@ const rounds=new Map(GB.games.flatMap(g=>g.rounds.map(r=>[r.audio,{...r,type:g.t
   const context=await browser.newContext({viewport:{width:vw,height:vh},hasTouch:true,serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.locator('#child-name').fill('سما');await page.getByRole('button',{name:'دخول / إضافة',exact:true}).click();
   const noOverflow=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');
-  let dragTurn=0;
+  let dragTurn=0;const bearSide={};
   async function drag(from,to){const a=await from.boundingBox(),b=await to.boundingBox();await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move(a.x+a.width/2+12,a.y+a.height/2+12,{steps:3});await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});await page.mouse.up();}
   async function place(item,zone){if(dragTurn++%2)await drag(item,zone);else{await item.click();await zone.click();}}
   const OBJ=GB.OBJ,PREP={in:'داخل',on:'فوق',under:'تحت',beside:'بجانب'};
   async function playRound(){
    await noOverflow();const stage=page.locator('.stage'),id=await stage.getAttribute('data-round'),r=rounds.get(id);assert.ok(r,'Known round '+id);
    for(const s of r.steps){
-    if(r.type==='bear'){await stage.getByRole('button',{name:GB.PART[s.tap]+' الدب',exact:true}).click();}
+    if(r.type==='bear'){// Paired parts (hands, ears, eyes, feet, cheeks) have two spots; take turns so both sides are proved right.
+     const spots=stage.locator(`.part[data-id="${s.tap}"]`),n=await spots.count();assert.ok(n>=1,'Spot for '+s.tap);if(n>1)bearSide[s.tap]=(bearSide[s.tap]??-1)+1;await spots.nth(n>1?bearSide[s.tap]%n:0).click();}
     else if(r.type==='balloons'){const o=r.options[s.tap];await stage.getByRole('button',{name:`بالون ${GB.COLOR[o.color][0]} ${o.size==='large'?'كبير':'صغير'}`,exact:true}).first().click();}
     else if(r.type==='feed'){const fruit=stage.locator('.tray .fruit');for(let i=0;i<s.count;i++)await fruit.first().click();await stage.getByRole('button',{name:'تم العدّ'}).click();}
     else if(r.type==='need'){await place(stage.locator(`.card-choice[data-id="${s.give}"]`),stage.getByRole('button',{name:'أعطِ الدب'}));}

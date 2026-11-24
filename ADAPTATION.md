@@ -33,7 +33,7 @@ The source targets adults. This app is not a standardized preschool assessment, 
 
 ## Accounts and privacy
 
-VOC-style local accounts: stable outlined fruit/animal avatars, Arabic search and sorting, protected hidden Hamada account, parent calculation gate, admin-only deletion and confirmation. Type `Hamada` to sign in to the admin account. This app has independent stores, `follow-direction-children-v1` and `follow-direction-account-avatars-v1`; it reads no VOC progress and uses no Google, Drive, Sheets, Firebase or analytics service.
+Local accounts in the shared VB-MAPP-style window: drawn animal heads, Arabic search and sorting, parent calculation gate, and deletion with one confirmation. Every account is an ordinary child; there is no built-in owner account (retired 2026-11-19), and therapist-only features open with the therapist lock. This app has independent stores, `follow-direction-children-v1` and `follow-direction-account-avatars-v1`; it reads no VOC progress and uses no Google, Drive, Sheets, Firebase or analytics service.
 
 These are device/browser profiles, not authenticated online accounts. They do not synchronize between devices. There is no import, export or backup. Browser data clearing removes local progress. Gender and birth date are optional profile fields, validated and editable in the comparison table. A stale tab cannot overwrite another tab's saved changes. Corrupt/unavailable storage is reported without resetting it.
 

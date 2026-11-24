@@ -145,15 +145,6 @@ body[data-view=task] .task{flex:1 1 auto;min-height:0;display:flex;flex-directio
 .lock-switch[aria-pressed=true]{color:#16a34a!important;background:#dcfce7!important}
 #toolbar .suite-account-chip{display:inline-grid;width:28px;height:28px;border-radius:50%;overflow:hidden}
 #toolbar .suite-account-chip .suite-account-avatar{width:28px;height:28px;margin:0;padding:0}
-/* Goals in the report (therapist mode): red = working on now, green = achieved, yellow = suggested next. */
-.goals-report .goal-group{margin:12px 0 0;padding:10px 14px;border:1.5px solid;border-radius:16px}
-.goals-report .goal-group h3{margin:0 0 6px;font-size:15px}
-.goals-report .goal-group[data-state=working]{background:#fdf3f2;border-color:#f2c4bf;color:#7f1d1d}
-.goals-report .goal-group[data-state=done]{background:#f2fbf5;border-color:#bfe5cd;color:#14532d}
-.goals-report .goal-group[data-state=suggested]{background:#fffbeb;border-color:#f6dfa0;color:#713f12}
-.goals-report .goal-row{display:grid;grid-template-columns:1fr minmax(80px,30%) 48px;align-items:center;gap:10px;padding:6px 0}
-.goals-report .goal-row small{display:block;color:#5c7285;font-size:12px}
-.goals-report .goal-row .meter{height:10px}
 .print-reports{display:inline-flex;align-items:center;gap:8px;padding:0 14px;width:auto!important}
 /* Print window: styled toggle cards, each chosen report becomes its own PDF. */
 dialog.print-dialog{width:min(92vw,420px);border:0;border-radius:26px;padding:24px;box-shadow:0 20px 50px #0f172a33}

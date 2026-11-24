@@ -13,15 +13,30 @@
  };
  const obj=(key,color)=>pic(FRUIT[key]||P.art(key,color));
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
- const SH='fill="#1d3b50" opacity=".13" stroke="none"',LIGHT='#f3dfc4',FUR='#c89f72',BLUSH='<circle cx="66" cy="94" r="8" fill="#eb8f86" opacity=".45" stroke="none"/><circle cx="134" cy="94" r="8" fill="#eb8f86" opacity=".45" stroke="none"/>';
- // The bear friend. BEAR_PARTS are tap targets as percentages of this 200×225 drawing.
- const BEAR=`<svg viewBox="0 0 200 225" aria-hidden="true"><g fill="${FUR}"><circle cx="52" cy="42" r="23"/><circle cx="148" cy="42" r="23"/><circle cx="52" cy="42" r="11" fill="${LIGHT}"/><circle cx="148" cy="42" r="11" fill="${LIGHT}"/>
-<ellipse cx="40" cy="150" rx="18" ry="31" transform="rotate(22 40 150)"/><ellipse cx="160" cy="150" rx="18" ry="31" transform="rotate(-22 160 150)"/><ellipse cx="70" cy="207" rx="27" ry="15"/><ellipse cx="130" cy="207" rx="27" ry="15"/>
-<ellipse cx="100" cy="166" rx="56" ry="50"/><circle cx="100" cy="76" r="56"/></g><ellipse cx="70" cy="210" rx="12" ry="7" fill="${LIGHT}" stroke="none"/><ellipse cx="130" cy="210" rx="12" ry="7" fill="${LIGHT}" stroke="none"/>
-<ellipse cx="100" cy="176" rx="32" ry="29" fill="${LIGHT}"/><path d="M150 140c8 30-12 66-50 76 34 2 58-24 56-58Z" ${SH}/><path d="M146 50c14 30 0 70-46 82 40 2 64-30 52-66Z" ${SH}/>
-<ellipse cx="100" cy="98" rx="26" ry="19" fill="${LIGHT}"/><circle cx="80" cy="66" r="6.5" fill="currentColor" stroke="none"/><circle cx="120" cy="66" r="6.5" fill="currentColor" stroke="none"/><circle cx="82.5" cy="63.5" r="2.2" fill="#fff" stroke="none"/><circle cx="122.5" cy="63.5" r="2.2" fill="#fff" stroke="none"/>
-<path d="M89 87q11-7 22 0l-11 10Z" fill="currentColor"/><path d="M100 97v6m-12 3q12 10 24 0"/>${BLUSH}<path d="M100 131l-17-10v20Zm0 0 17-10v20Z" fill="#e57b6e"/><circle cx="100" cy="131" r="5" fill="#e57b6e"/><path d="M64 40a46 46 0 0 1 22-16" stroke="#fff" stroke-width="5" opacity=".5"/></svg>`;
- const BEAR_PARTS={head:[50,9,22],eye:[60,28.5,11],ear:[74,18.5,14],nose:[50,39,11],mouth:[50,47,10],cheek:[67,42,10],bow:[50,58.2,12],hand:[81,70,15],tummy:[50,78,20],foot:[65,93,15]};
+ const SH='fill="#1d3b50" opacity=".13" stroke="none"',LIGHT='#f3dfc4',FUR='#c89f72',PAD='#e9b9a4';
+ // The bear friend: sitting, arms open, so both hands and both feet are easy to see and to tap.
+ // A paw has a palm pad and three toe beans; it is drawn at (x,y) and turned by r degrees.
+ const paw=(x,y,r)=>`<g transform="translate(${x} ${y}) rotate(${r})"><circle r="15" fill="${FUR}"/><ellipse cy="3" rx="7.5" ry="6" fill="${PAD}" stroke="none"/><g fill="${PAD}" stroke="none"><circle cx="-7" cy="-6" r="2.8"/><circle cy="-9" r="2.8"/><circle cx="7" cy="-6" r="2.8"/></g></g>`;
+ const foot=(x,y)=>`<ellipse cx="${x}" cy="${y}" rx="24" ry="20" fill="${FUR}"/><ellipse cx="${x}" cy="${y+3}" rx="13" ry="11" fill="${LIGHT}" stroke="none"/><g fill="${PAD}" stroke="none"><ellipse cx="${x}" cy="${y+4}" rx="8" ry="6.5"/><circle cx="${x-9}" cy="${y-9}" r="3.4"/><circle cx="${x}" cy="${y-12}" r="3.4"/><circle cx="${x+9}" cy="${y-9}" r="3.4"/></g>`;
+ const BEAR=`<svg viewBox="0 0 200 225" aria-hidden="true">
+<g fill="${FUR}"><circle cx="54" cy="36" r="21"/><circle cx="146" cy="36" r="21"/></g><circle cx="54" cy="36" r="10" fill="${PAD}" stroke="none"/><circle cx="146" cy="36" r="10" fill="${PAD}" stroke="none"/>
+<path d="M72 122C56 120 42 112 34 98L14 118C30 140 52 150 74 150Z" fill="${FUR}"/><path d="M128 122C144 120 158 112 166 98L186 118C170 140 148 150 126 150Z" fill="${FUR}"/>
+${paw(24,110,-35)}${paw(176,110,35)}
+<ellipse cx="100" cy="164" rx="50" ry="46" fill="${FUR}"/><ellipse cx="100" cy="170" rx="29" ry="27" fill="${LIGHT}"/><path d="M146 146c6 30-14 58-46 64 30 0 52-24 48-56Z" ${SH}/>
+${foot(66,200)}${foot(134,200)}
+<circle cx="100" cy="76" r="54" fill="${FUR}"/><path d="M144 46c14 28 2 70-44 84 40 0 64-34 50-74Z" ${SH}/>
+<ellipse cx="100" cy="98" rx="25" ry="20" fill="${LIGHT}"/>
+<circle cx="80" cy="66" r="7" fill="currentColor" stroke="none"/><circle cx="120" cy="66" r="7" fill="currentColor" stroke="none"/><circle cx="82.5" cy="63.5" r="2.4" fill="#fff" stroke="none"/><circle cx="122.5" cy="63.5" r="2.4" fill="#fff" stroke="none"/>
+<path d="M90 87q10-6 20 0q-2 7-10 9q-8-2-10-9Z" fill="currentColor"/><path d="M100 96v7"/><path d="M89 104q11 14 22 0Z" fill="#9b3d3d"/><path d="M94 109q6-5 12 0q-6 4-12 0Z" fill="#ef8f8f" stroke="none"/>
+<circle cx="64" cy="92" r="8" fill="#eb8f86" opacity=".5" stroke="none"/><circle cx="136" cy="92" r="8" fill="#eb8f86" opacity=".5" stroke="none"/>
+<path d="M100 132l-16-10v20Zm0 0 16-10v20Z" fill="#e57b6e"/><circle cx="100" cy="132" r="5" fill="#e57b6e"/>
+<path d="M66 40a46 46 0 0 1 22-16" stroke="#fff" stroke-width="5" opacity=".5"/></svg>`;
+ // Tap targets as [x%, y%, width%] of the 200×225 drawing; 'flat' spots (nose, mouth) are wide and short so they never overlap. A part the bear has two of lists both,
+ // and either one is right: «المس يد الدب» accepts the left hand and the right hand.
+ const BEAR_PARTS={head:[[50,18,22]],eye:[[40,29.3,10],[60,29.3,10]],ear:[[27,16,15],[73,16,15]],nose:[[50,39.2,13,'flat']],mouth:[[50,49.3,13,'flat']],cheek:[[32,41,10],[68,41,10]],
+  bow:[[50,58.7,12]],hand:[[12,48.9,17],[88,48.9,17]],tummy:[[50,75.6,24]],foot:[[33,88.9,20],[67,88.9,20]]};
+ // The bear's own right side is on the child's left. Arabic adjective agrees with the part's gender.
+ const SIDE={hand:['اليمنى','اليسرى'],eye:['اليمنى','اليسرى'],ear:['اليمنى','اليسرى'],foot:['اليمنى','اليسرى'],cheek:['الأيمن','الأيسر']};
  const PLACES={
   house:`<path d="M64 34V16h10v24Z" fill="#b07d52"/><path d="M20 48h60v40H20Z" fill="#f6d9b4"/><path d="M10 52 50 16l40 36Z" fill="#e57b6e"/><path d="M42 88V68a8 8 0 0 1 16 0v20Z" fill="#b07d52"/><rect x="25" y="58" width="12" height="12" rx="2" fill="#dff0f8"/><rect x="63" y="58" width="12" height="12" rx="2" fill="#dff0f8"/><path d="M66 52h14v36H66Z" ${SH}/><path d="M8 88h84"/>`,
   tree:`<path d="M44 90V58h12v32Z" fill="#b07d52"/><g fill="#7cbf86"><circle cx="32" cy="48" r="17"/><circle cx="68" cy="48" r="17"/><circle cx="50" cy="32" r="22"/></g><circle cx="38" cy="30" r="3.5" fill="#e57b6e"/><circle cx="62" cy="40" r="3.5" fill="#e57b6e"/><circle cx="44" cy="52" r="3.5" fill="#e57b6e"/><path d="M58 18a20 20 0 0 1 10 10" stroke="#fff" stroke-width="3" opacity=".6"/><path d="M10 90h80"/>`,
@@ -96,7 +111,9 @@
   function placing(item,zone,check){if(!zone){bad(item);return;}const ok=check(item.dataset.id,zone.dataset.prep,zone.closest('.ref').dataset.ref);if(ok){placeInto(item,zone);good(item);}else{select(null);bad(item);}}
   const SCENES={
    bear(){stage.innerHTML=`<div class="bear">${BEAR}</div>`;const bear=stage.firstChild;
-    for(const [part,[x,y,size]]of Object.entries(BEAR_PARTS)){const b=el('','part',{'aria-label':GB.PART[part]+' الدب','data-id':part});Object.assign(b.style,{left:x+'%',top:y+'%',width:size+'%'});b.onclick=()=>{if(want()?.tap===part){b.classList.remove('right');void b.offsetWidth;good(b);}else bad(bear);};bear.append(b);}},
+    for(const [part,spots]of Object.entries(BEAR_PARTS))spots.forEach(([x,y,size,shape],i)=>{const name=`${GB.PART[part]} الدب${spots.length>1?' '+SIDE[part][i]:''}`;
+     const b=el('',shape?'part '+shape:'part',{'aria-label':name,'data-id':part});Object.assign(b.style,{left:x+'%',top:y+'%',width:size+'%'});
+     b.onclick=()=>{if(want()?.tap===part){b.classList.remove('right');void b.offsetWidth;good(b);}else bad(bear);};bear.append(b);});},
    cards(options,check,art=obj){const row=document.createElement('div');row.className='cards';row.style.setProperty('--n',options.length);for(const key of options){const b=el(art(key),'card-choice',{'aria-label':GB.OBJ[key]||GB.PLACE[key]||key,'data-id':key});b.onclick=()=>check(key,b);row.append(b);}stage.append(row);return row;},
    find(){stage.innerHTML='<div class="shelf"></div>';SCENES.cards(shuffle(round().options),(key,b)=>want().tap===key?good(b):bad(b));},
    train(){stage.innerHTML=`<div class="train"><span class="engine">${pic(ENGINE)}</span><span class="wagon"></span><span class="wagon"></span></div>`;

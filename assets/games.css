@@ -79,6 +79,20 @@ button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pic-card figcaption{font-size:14px;line-height:1.5;color:#22445a}
 .pic-n{position:absolute;top:6px;inset-inline-start:8px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff3d6;color:#8b6514;font-weight:800}
 .pic-then svg{transform:scaleX(-1);color:#9fb2c1}
+/* Picture cards move like a model prompt (assets/pictures.js): start frame, the action, then the end holds.
+   Without animation (reduced motion) every card rests on its end frame. */
+.picture .pa,.picture .pf{opacity:0}
+.picture .pa{animation:pic-a 3s infinite}.picture .pb{animation:pic-b 3s infinite}
+.picture .pf{animation:pic-f .9s infinite}.picture .pg{animation:pic-g .9s infinite}
+.picture .pm{animation:pic-m 3s ease-in-out infinite}
+.picture .pt{animation:pic-t 3s ease-in-out infinite}
+.picture .pk{transform-box:fill-box;transform-origin:center;animation:pic-k 3s ease-in-out infinite}
+@keyframes pic-a{0%,30%{opacity:1}40%,100%{opacity:0}}@keyframes pic-b{0%,30%{opacity:0}40%,100%{opacity:1}}
+@keyframes pic-f{0%,49%{opacity:1}50%,100%{opacity:0}}@keyframes pic-g{0%,49%{opacity:0}50%,100%{opacity:1}}
+@keyframes pic-m{0%,15%{transform:translate(var(--dx),var(--dy))}55%,100%{transform:none}}
+@keyframes pic-t{0%,10%{transform:translateY(16px)}40%{transform:none}48%{transform:translateY(3px)}56%,100%{transform:none}}
+@keyframes pic-k{0%,35%{opacity:.35;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}65%,100%{opacity:.85;transform:scale(1)}}
+.pic-n{width:34px;height:34px;font-size:19px;background:#f6d77e;color:#5c4210;box-shadow:0 2px 0 #c99a2e}
 .cheer{text-align:center}.cheer svg{width:72px;height:72px;color:#c99a2e;fill:#f6d77e}
 
 /* Games list */
@@ -114,9 +128,9 @@ button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .card-choice.right{border-color:#79a68c;background:#f1f8f3}
 
 /* Bear */
-.bear{position:relative;width:min(320px,62vw,46dvh);aspect-ratio:200/225;color:#22445a}
+.bear{position:relative;width:min(340px,88vw,46dvh);aspect-ratio:200/225;color:#22445a}
 .bear>svg{width:100%;height:100%;stroke-width:2.4}
-.part{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;padding:0;min-width:40px;min-height:40px}
+.part{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;padding:0;min-width:40px;min-height:40px}.part.flat{aspect-ratio:auto;height:7.5%;min-height:24px;border-radius:999px}
 .part:hover{background:#ffffff40}
 .part.right{background:#f6d77e99;animation:yay .55s}
 

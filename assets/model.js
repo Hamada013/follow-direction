@@ -3,10 +3,14 @@
  const KEY='follow-direction-children-v1';
  const clone=x=>JSON.parse(JSON.stringify(x));
  const nameKey=x=>x.normalize('NFKC').trim().toLocaleLowerCase();
- const admin=c=>c.role==='admin'||nameKey(c.name)==='hamada';
+ // Every account is an ordinary child (the built-in owner account was retired on 2026-11-19). Owner records
+ // saved before then keep role 'admin' and stay hidden, as in the shared accounts window.
+ const retired=c=>c.role==='admin';
  const GENDERS=['boy','girl'];
  // Birth dates are optional calendar dates (YYYY-MM-DD), never in the future.
  const validBirth=x=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return false;const d=new Date(x+'T00:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===x&&x>='1990-01-01'&&+d<=Date.now();};
+ const validPlan=p=>!!p&&typeof p==='object'&&!Array.isArray(p)&&Array.isArray(p.goals)&&p.goals.length<=200&&['childName','therapist','start'].every(k=>p[k]===undefined||typeof p[k]==='string'&&p[k].length<=80)
+  &&p.goals.every(g=>g&&typeof g.id==='string'&&g.id.length<=20&&(g.rating==null||[20,40,60,80].includes(g.rating))&&(g.history===undefined||Array.isArray(g.history)&&g.history.length<=500));
  function validate(d,bank){
   if(d?.schema!==1||!Number.isInteger(d.revision)||!Array.isArray(d.children)||d.children.length>1000)throw Error('ملف الحسابات غير صالح.');
   const ids=new Set();
@@ -20,6 +24,8 @@
     if(s.complete&&(!s.ended||s.results.length!==s.items.length))throw Error('جلسة غير مكتملة.');
    }
    if(c.games!==undefined&&(!Array.isArray(c.games)||c.games.length>2000||!c.games.every(g=>g&&bank.groups.some(x=>x.id===g.group)&&Number.isInteger(g.rounds)&&Number.isInteger(g.firstTry)&&g.firstTry>=0&&g.firstTry<=g.rounds)))throw Error('بيانات الألعاب غير صالحة.');
+   // The therapist's intervention plan (assets/intervention.js): chosen short-term goals with their ratings.
+   if(c.intervention!==undefined&&!validPlan(c.intervention))throw Error('بيانات خطة التدخل غير صالحة.');
    if(c.program!==undefined&&(!c.program||typeof c.program.done!=='object'||typeof c.program.unlocked!=='object'||c.program.rounds!==undefined&&(!Array.isArray(c.program.rounds)||!c.program.rounds.every(r=>Array.isArray(r)&&r.length&&r.every(g=>bank.groups.some(x=>x.id===g))))))throw Error('بيانات الخطة اليومية غير صالحة.');
   }
   if(d.active!==null&&!ids.has(d.active))throw Error('الحساب النشط غير موجود.');
@@ -33,9 +39,9 @@
    const next=clone(this.data);fn(next);next.revision++;validate(next,this.bank);const raw=JSON.stringify(next);this.storage.setItem(KEY,raw);this.data=next;this.raw=raw;return this.active();
   }
   // New accounts may carry gender and birth date; an existing account only gains what it lacks.
-  signIn(name,profile={}){name=String(name).trim();if(!name||name.length>60)throw Error('أدخل اسمًا من ١ إلى ٦٠ حرفًا.');const extra=cleanProfile(profile);return this.commit(d=>{let c=d.children.find(c=>nameKey(c.name)===nameKey(name));if(!c){c={id:crypto.randomUUID(),name,role:nameKey(name)==='hamada'?'admin':'child',created:new Date().toISOString(),sessions:[]};d.children.push(c);}if(!admin(c))for(const [k,v]of Object.entries(extra))if(c[k]===undefined)c[k]=v;d.active=c.id;});}
+  signIn(name,profile={}){name=String(name).trim();if(!name||name.length>60)throw Error('أدخل اسمًا من ١ إلى ٦٠ حرفًا.');const extra=cleanProfile(profile);return this.commit(d=>{let c=d.children.find(c=>nameKey(c.name)===nameKey(name));if(!c){c={id:crypto.randomUUID(),name,role:'child',created:new Date().toISOString(),sessions:[]};d.children.push(c);}for(const [k,v]of Object.entries(extra))if(c[k]===undefined)c[k]=v;d.active=c.id;});}
   // Sets or clears gender and birth date for one child; an empty value clears it.
-  setProfile(id,profile){const extra=cleanProfile(profile,true);return this.commit(d=>{const c=d.children.find(c=>c.id===id);if(!c||admin(c))throw Error('الحساب غير موجود.');for(const [k,v]of Object.entries(extra)){if(v===null)delete c[k];else c[k]=v;}});}
+  setProfile(id,profile){const extra=cleanProfile(profile,true);return this.commit(d=>{const c=d.children.find(c=>c.id===id);if(!c||retired(c))throw Error('الحساب غير موجود.');for(const [k,v]of Object.entries(extra)){if(v===null)delete c[k];else c[k]=v;}});}
   select(id){return this.commit(d=>{if(!d.children.some(c=>c.id===id))throw Error('الحساب غير موجود.');d.active=id;});}
   draft(){return this.active()?.sessions.find(s=>!s.ended)||null;}
   // A daily-plan step passes a short item list and its day; otherwise the whole skill or screen is used.
@@ -54,6 +60,9 @@
    return [...again,...pool.filter(x=>!again.includes(x.id)).sort((a,b)=>a.n-b.n||a.order-b.order).slice(0,count-again.length).map(x=>x.id)];}
   program(){const p=this.active()?.program;return {done:{...p?.done},unlocked:{...p?.unlocked},...(p?.rounds?{rounds:p.rounds.map(r=>[...r])}:{})};}
   startRound(groups){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};(c.program.rounds||=[]).push([...groups]);});}
+  // The active child's intervention plan; saving returns false when it could not be stored (another tab, full storage).
+  intervention(){const p=this.active()?.intervention;return p?clone(p):null;}
+  saveIntervention(plan){try{this.commit(d=>{const c=d.children.find(c=>c.id===d.active);if(!c)throw Error('اختر حسابًا.');c.intervention=clone(plan);});return true;}catch{return false;}}
   mastered(child=this.active()){return mastered(child,this.bank);}
   support(group,child=this.active()){return support(child,this.bank,group);}
   markStep(day,step){this.commit(d=>{const c=d.children.find(c=>c.id===d.active);c.program||={done:{},unlocked:{}};c.program.done[day+':'+step]||=new Date().toISOString();});}
@@ -106,5 +115,5 @@
   return {age:ageMonths(child.birth,on),gender:child.gender||null,screened:!!screen,checked:checked(child,bank).size,screenRate:screen?rate(screen.results):null,practiceRate:rate(practice),practiced:practice.filter(r=>r.outcome!=='skip').length,games:(child.games||[]).length,last:times.at(-1)||null};
  }
  function counts(results=[]){return results.reduce((a,r)=>{a[r.outcome]++;return a;},{independent:0,help:0,incorrect:0,skip:0});}
- const api={Store,KEY,counts,validate,summary,ageMonths,mastered,support,SUPPORT,GENDERS,isAdmin:admin};if(typeof module!=='undefined')module.exports=api;else root.FollowModel=api;
+ const api={Store,KEY,counts,validate,summary,ageMonths,mastered,support,SUPPORT,GENDERS,isRetired:retired};if(typeof module!=='undefined')module.exports=api;else root.FollowModel=api;
 })(globalThis);
