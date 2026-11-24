@@ -259,7 +259,9 @@
 
  // ---------- Intervention plan (therapist mode) ----------
  // The shared plan window (assets/intervention.js) reads and saves the active child's plan through this bridge.
- window.FollowProgress={active:()=>store?.active()||null,intervention:()=>store?.intervention()||null,saveIntervention:plan=>store?store.saveIntervention(plan):false};
+ window.FollowProgress={active:()=>store?.active()||null,intervention:()=>store?.intervention()||null,saveIntervention:plan=>store?store.saveIntervention(plan):false,
+  // Opens the child with this name, adding them when missing (the start screen and clinic sync use it).
+  signIn:name=>{try{const child=store.signIn(String(name).replace(/\s+/g,' '),{});render();return child;}catch{return null;}}};
  // ---------- «طباعة التقارير»: choose the reports, each one downloads as its own PDF ----------
  let printDialog;
  function choosePrint(){
